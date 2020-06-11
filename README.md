@@ -1,4 +1,7 @@
 # timefops
+[![PyPI version](https://badge.fury.io/py/timefops.svg)](https://badge.fury.io/py/timefops)
+[![GitHub license](https://img.shields.io/github/license/stiftcast/timefops.svg)](https://github.com/stiftcast/timefops/blob/master/LICENSE.txt)
+
 Performs file operations (moving, copying and archiving) on files/directories based on their access/change/modified dates.
 
 ## Description
