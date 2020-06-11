@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import unittest
 import unittest.mock as mock
 import os
@@ -55,4 +57,4 @@ class TestHelpers(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(buffer=True)
+    unittest.main()
