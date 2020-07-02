@@ -9,11 +9,10 @@
 
 import os
 import collections
-import time
 import shutil
 import errno
 import tarfile
-from datetime import datetime
+from datetime import datetime as dt
 
 
 def find_mount_point(path):
@@ -35,7 +34,7 @@ def path_time_map(src, method, fmt, individual=False):
     *args:
     src - list: list of paths.
     method - str: 'os.path' function to use (getatime, getctime, getmtime) .
-    fmt -str: datetime format identitfier.
+    fmt - str: datetime format identitfier.
 
     **kwargs:
     individual - bool: changes how items in src are evaluated (literal).
@@ -46,13 +45,12 @@ def path_time_map(src, method, fmt, individual=False):
     { absolute_path: [acm]time of object (str; determined by 'fmt' arg) }
     """
     if individual:
-        return {os.path.abspath(x): datetime.strptime(time.ctime(getattr(
-            os.path, method)(x)), "%a %b %d %H:%M:%S %Y").strftime(fmt)
-                for x in src}
+        return {os.path.abspath(x): dt.fromtimestamp(getattr(
+            os.path, method)(x)).strftime(fmt) for x in src}
     else:
-        return {os.path.abspath(y): datetime.strptime(time.ctime(getattr(
-            os.path, method)(y)), "%a %b %d %H:%M:%S %Y").strftime(fmt)
-                for x in list((os.scandir(path) for path in src)) for y in x}
+        return {os.path.abspath(y): dt.fromtimestamp(getattr(
+            os.path, method)(y)).strftime(fmt) for x in list(
+                (os.scandir(path) for path in src)) for y in x}
 
 
 def rename_duplicates(f):
