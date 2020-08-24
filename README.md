@@ -5,15 +5,14 @@
 Performs file operations (moving, copying and archiving) on files/directories based on their access/change/modified dates.
 
 ## Description
-This program will provide a total of 9 commands, which will provide moving, copying and archiving capabilities for files/directories based on their access time, change time or modified time.
+This program provides moving, copying and archiving capabilities for files/directories based on their access time, change time or modified time.
 
-`[acm]tmove` - Move files/dirs based on the date last accessed/created/modified.<br />
-`[acm]tcopy` - Copy files/dirs based on the date last accessed/created/modified.<br />
-`[acm]tarchive` - Archive files/dirs based on the date last accessed/created/modified.<br />
+The CLI interface contains nested sub-parsers where you'll be required to choose the time predicate and operation. This program also contains an API (see examples below) for usage in other Python programs, though its recommended to use the CLI, as that is how the program is designed to be used.
+
 
 Both the copying and moving functionality utilize Python's `shutil` module, whereas the `tarfile` module is used for creating tar archives.
 
-Tested & confirmed working on Linux and Windows platforms, compatibility with Mac OS is unknown.
+Python 3.7+ is required. 
 
 ## Installation
 Using pipx (recommended):
@@ -25,49 +24,86 @@ Using pip:
 pip3 install --user timefops
 ```
 ## Usage
-For `[acm]tcopy` or `[acm]tmove`:
+Choosing the time predicate:
+
 ```
-positional arguments:
-src                   Source directories/files.
+stiftcast@debian:~$ timefops -h
+usage: timefops [-h] [-V] <time> ...
+
+Operate on files/directories based on their access/change/modified dates.
 
 optional arguments:
--h, --help            show this help message and exit
--t TARGET_DIRECTORY, --target-directory TARGET_DIRECTORY
-                    Destination directory.
--f FORMAT, --format FORMAT
-                    Set folder name format (using Python's datetime
-                    formatting directives).
--i, --individual-items
-                    Setting this flag will allow for specifying individual
-                    source files and folders. The difference between
-                    specifiying a source folder with this flag on is that
-                    any folder(s) specified will not be traversed and
-                    instead be treated as a standalone item.
---dry-run             Show results, but don't execute.
--v, --version         Display licence/version info and exit.
+  -h, --help     show this help message and exit
+  -V, --version  print version number/info and exit
+
+Time predicate:
+  <time>
+    atime        Perform operations based on last access-time.
+    ctime        Perform operations based on last change-time.
+    mtime        Perform operations based on last modification-time.
 ```
-<br /> For `[acm]tarchive`:
+Choosing the operation:
 ```
-positional arguments:
-src                   Source directories/files.
+stiftcast@debian:~$ timefops mtime -h
+usage: timefops mtime [-h] [-V] <operation> ...
+
+Perform operations based on last modification-time.
 
 optional arguments:
--h, --help            show this help message and exit
--a ARCHIVE, --archive ARCHIVE
-                    Name for target archive.
--c {bz2,gz,xz}, --compression {bz2,gz,xz}
-                    Compression format for the archive.
--f FORMAT, --format FORMAT
-                    Set folder name format (using Python's datetime
-                    formatting directives).
--i, --individual-items
-                    Setting this flag will allow for specifying individual
-                    source files and folders. The difference between
-                    specifiying a source folder with this flag on is that
-                    any folder(s) specified will not be traversed and
-                    instead be treated as a standalone item.
---dry-run             Show results, but don't execute.
--v, --version         Display licence/version info and exit.
+  -h, --help     show this help message and exit
+  -V, --version  print version number/info and exit
+
+Operations:
+  <operation>
+    archive      Archive contents to a tarball, with optional compression.
+    copy         Copy contents to a different location.
+    move         Move contents to a different (local) location.
+```
+
+<br /> Options for `archive`:
+```
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         print version number/info and exit
+
+General arguments:
+  src                   Source directories/files.
+  -a ARCHIVE, --archive ARCHIVE
+                        Name for target archive.
+  -c {bz2,gz,xz}, --compression {bz2,gz,xz}
+                        Compression format for the archive.
+  -f FORMAT, --format FORMAT
+                        Set folder name format (using Python's datetime
+                        formatting directives).
+  -i, --individual-items
+                        Setting this flag will allow for specifying individual
+                        source files and folders. The difference between
+                        specifiying a source folder with this flag on is that
+                        any folder(s) specified will not be traversed and
+                        instead be treated as a standalone item.
+  --dry-run             Show results, but don't execute.
+```
+
+Options for `copy` or `move`:
+```
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         print version number/info and exit
+
+General arguments:
+  src                   Source directories/files.
+  -t TARGET_DIRECTORY, --target-directory TARGET_DIRECTORY
+                        Destination directory.
+  -f FORMAT, --format FORMAT
+                        Set folder name format (using Python's datetime
+                        formatting directives).
+  -i, --individual-items
+                        Setting this flag will allow for specifying individual
+                        source files and folders. The difference between
+                        specifiying a source folder with this flag on is that
+                        any folder(s) specified will not be traversed and
+                        instead be treated as a standalone item.
+  --dry-run             Show results, but don't execute.
 ```
 ## Examples
 
@@ -90,28 +126,30 @@ timefops.move([list_of_dirs], dest_dir, "mtime", "%Y-%m-%d", individual=False, d
 The provided commands can either be used on their own, or with the `find` and `xargs` commands in tandem. The latter is the recommended method, due to find's powerful filtering options.<br />
 
 #### Standalone
-Traverse through multiple directories and copy the contents somewhere, sorted by access date:
+Traverse through multiple directories and copy the contents somewhere, sorted by access-time:
 ```sh
-atcopy dir1/ dir2/ dir3/ -t /dest/path
+timefops atime copy dir1/ dir2/ dir3/ -t /dest/path
 ```
-Archive all the files and folders specified as is into a .tar.bz2 archive, sorted by modified date:
+Archive all the files and folders specified as is into a .tar.bz2 archive, sorted by modified-time:
 ```sh
-mtarchive file1 dir1/ dir2/ file2 -i -a standalone_example -c bz2
+timefops mtime archive file1 dir1/ dir2/ file2 -i -a standalone_example -c bz2
 ```
 #### <br />Using `find` and `xargs` 
-Find files accessed within the last hour and move them somewhere into folders with the 12-hour time, sorted by accessed date:
+Find files accessed within the last hour and move them somewhere into folders with the 12-hour time, sorted by accessed-time:
 ```sh
-find ./ -type f -amin -60 -print0 | xargs -0 atmove -f "%I:%M%p" -i -t /dest/path
+find ./ -type f -amin -60 -print0 | xargs -0 timefops atime move -f "%I:%M%p" -i -t /dest/path
 ```
-Find all shell scripts and put them in a gzip-compressed tar archive, sorted by changed date:
+Find all shell scripts and put them in a gzip-compressed tar archive, sorted by changed-time:
 ```sh
-find ./ -type f -iname "*.sh" -print0 | xargs -0 ctarchive -i -a ex_archive -c gz
+find ./ -type f -iname "*.sh" -print0 | xargs -0 timefops ctime archive -i -a ex_archive -c gz
 ```
-Get directories that were modified between April 1, 2020 - April 30, 2020 and copy them somewhere, sorted by modified date:
+Get directories that were modified between April 1, 2020 - April 30, 2020 and copy them somewhere, sorted by modified-time:
 ```sh
-find ./ -type d -newermt 2020-04-01 ! -newermt 2020-04-30 -prune -print0 | xargs -0 mtcopy -i -t /dest/path
+find ./ -type d -newermt 2020-04-01 ! -newermt 2020-04-30 -prune -print0 | \
+xargs -0 timefops mtime copy -i -t /dest/path
 ```
-Specify directories to be traversed (-i flag is omitted) and copy the contents inside to somewhere, sorted by modified date:
+Specify directories to be traversed (-i flag is omitted) and copy the contents inside to somewhere, sorted by modified-time:
 ```sh
-find ./ -type d \( -iname 'pat1' -o -iname 'pat2' \) -prune -print0 | xargs -0 mtcopy -t /dest/path
+find ./ -type d \( -iname 'pat1' -o -iname 'pat2' \) -prune -print0 | \
+xargs -0 timefops mtime copy -t /dest/path
 ```
