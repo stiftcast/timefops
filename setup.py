@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from setuptools import setup
 from os import path
 
@@ -12,7 +10,7 @@ setup(
     url="https://github.com/stiftcast/timefops",
     author="stiftcast",
     author_email="stiftcast@gmail.com",
-    version="0.1",
+    version="0.2",
     license="GPLv3",
     description="A cross-platform module for file operations based on time.",
     long_description=long_description,
@@ -24,8 +22,6 @@ setup(
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: System Administrators",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Operating System :: OS Independent",
@@ -33,15 +29,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            "atarchive = timefops.cli:atarchive",
-            "atcopy = timefops.cli:atcopy",
-            "atmove = timefops.cli:atmove",
-            "ctarchive = timefops.cli:ctarchive",
-            "ctcopy = timefops.cli:ctcopy",
-            "ctmove = timefops.cli:ctmove",
-            "mtarchive = timefops.cli:mtarchive",
-            "mtcopy = timefops.cli:mtcopy",
-            "mtmove = timefops.cli:mtmove",
+            "timefops = timefops._cli:main",
         ],
     }
 )
