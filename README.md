@@ -1,5 +1,4 @@
 # timefops
-[![PyPI version fury.io](https://badge.fury.io/py/timefops.svg)](https://pypi.python.org/pypi/timefops/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/timefops.svg)](https://pypi.python.org/pypi/timefops)
 [![PyPI license](https://img.shields.io/pypi/l/timefops.svg)](https://pypi.python.org/pypi/timefops/)
 
