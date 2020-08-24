@@ -17,6 +17,7 @@ setup(
     long_description_content_type="text/markdown",
     test_suite="tests.my_test_suite",
     packages=["timefops"],
+    python_requires=">=3.7",
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: End Users/Desktop",
