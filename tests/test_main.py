@@ -6,7 +6,7 @@ import os
 import random
 import uuid
 import collections
-import timefops as tf
+from timefops import timefops as tf
 
 
 class TestHelpers(unittest.TestCase):
