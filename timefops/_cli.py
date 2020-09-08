@@ -205,7 +205,7 @@ def cli(argv):
 
         if opts.zipfile:
             if opts.compression == "gz":
-                parser.error("'gz' compression not available with --zipfile")
+                parser.error("'gz' compression not available with -z/--zipfile")
             if not opts.archive.endswith(".zip"):
                 opts.archive = opts.archive + ".zip"
         else:
