@@ -249,7 +249,7 @@ def main():
     if args.operation == "archive":
         archive(args.src, args.archive, args.time, args.format,
                 individual=args.individual_items, cmp=args.compression,
-                dry_run=args.dry_run)
+                zip_file=args.zipfile, dry_run=args.dry_run)
         
     elif args.operation == "copy":
         copy(args.src, args.target_directory, args.time, args.format,
