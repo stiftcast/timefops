@@ -227,7 +227,7 @@ def cli(argv):
 
         # Make sure the file doesn't exist after (possibly) adding suffix
         if os.path.isfile(opts.archive):
-            raise parser.error(f"file '{opts.archive}' already exists.")
+            parser.error(f"file '{opts.archive}' already exists.")
 
         if not os.access(os.path.dirname(opts.archive), os.W_OK | os.X_OK):
             parser.error("directory where archive is to be created is not "
