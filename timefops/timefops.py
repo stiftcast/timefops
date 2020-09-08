@@ -12,6 +12,7 @@ import collections
 import shutil
 import errno
 import tarfile
+import zipfile
 from datetime import datetime as dt
 
 
@@ -199,7 +200,8 @@ def copy(src, dst, method, fmt, individual=False, dry_run=False):
             ))
 
 
-def archive(src, dst, method, fmt, cmp=None, individual=False, dry_run=False):
+def archive(src, dst, method, fmt, cmp="", individual=False, zip_file=False,
+            dry_run=False):
     """
     *args:
     src - list: directories/filenames.
@@ -223,15 +225,29 @@ def archive(src, dst, method, fmt, cmp=None, individual=False, dry_run=False):
     rename_map = rename_duplicates(file_time_map)
 
     if not dry_run:
-        with tarfile.open(dst, mode=f"x:{cmp}" if cmp else "x") as tar:
-            # Put the associated items into a tar archive
-            # nesting the items under the designated path.
-            for i, p in file_time_map.items():
-                try:
-                    tar.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
-                except PermissionError:
-                    print("You dont have the proper permissions to add: "
-                          "'{}' to the archive, skipping.".format(i))
+        # Put the associated items into either a tar archive or a zip file,
+        # nesting the items under the designated path.
+        if zip_file:
+            cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
+                            "xz" : zipfile.ZIP_LZMA}
+
+            with zipfile.ZipFile(dst, mode="x", 
+                                 compression=cmp_mappings.get(cmp,
+                                     zipfile.ZIP_STORED)) as z:
+                for i, p in file_time_map.items():
+                    try:
+                        z.write(i, os.path.join(p, rename_map[0].get(i)))
+                    except PermissionError:
+                        print("You dont have the proper permissions to add: "
+                              f"'{i}' to the zip file, skipping.")
+        else:
+            with tarfile.open(dst, mode=f"x:{cmp}" if cmp else "x") as t:
+                for i, p in file_time_map.items():
+                    try:
+                        t.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
+                    except PermissionError:
+                        print("You dont have the proper permissions to add: "
+                              f"'{i}' to the archive, skipping.")
     else:
         print("Creating directories based on {}.\n".format(method))
         print("# of items to be archived: {}".format(len(file_time_map)),
