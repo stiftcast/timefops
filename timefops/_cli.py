@@ -106,7 +106,13 @@ def cli(argv):
                                   choices=("bz2", "gz", "xz"),
                                   type=str.lower,
                                   help="Compression format for the archive.")
-
+        
+        gen_arc_args.add_argument("-z", "--zipfile",
+                                  action="store_true",
+                                  help="If set, makes a zip file instead of a "
+                                       "tar archive, note that GZ compression "
+                                       "is not available with this option.")
+        
         gen_arc_args.add_argument("-f", "--format",
                                   type=str,
                                   default="%Y-%m-%d",
@@ -194,12 +200,21 @@ def cli(argv):
                 parser.error(f"src dir '{path}' is unable to be traversed.")
 
     if opts.operation == "archive":
-        if not opts.compression and not opts.archive.endswith(".tar"):
-            opts.archive = opts.archive + ".tar"
+        if os.path.exists(opts.archive):
+            parser.error(f"file '{opts.archive}' already exists.")
 
-        elif opts.compression and not opts.archive.endswith(
-                ".tar.{}".format(opts.compression)):
-            opts.archive = opts.archive + f".tar.{opts.compression}"
+        if opts.zipfile:
+            if opts.compression == "gz":
+                parser.error("'gz' compression not available with --zipfile")
+            if not opts.archive.endswith(".zip"):
+                opts.archive = opts.archive + ".zip"
+        else:
+            if not opts.compression and not opts.archive.endswith(".tar"):
+                opts.archive = opts.archive + ".tar"
+
+            elif opts.compression and not opts.archive.endswith(
+                    f".tar.{opts.compression}"):
+                opts.archive = opts.archive + f".tar.{opts.compression}"
 
         dir_tree = tuple(filter(None, os.path.split(opts.archive)))
 
@@ -210,6 +225,7 @@ def cli(argv):
         else:
             opts.archive = os.path.join(os.getcwd(), dir_tree[0])
 
+        # Make sure the file doesn't exist after (possibly) adding suffix
         if os.path.isfile(opts.archive):
             raise parser.error(f"file '{opts.archive}' already exists.")
 
