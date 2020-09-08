@@ -211,6 +211,7 @@ def archive(src, dst, method, fmt, cmp="", individual=False, zip_file=False,
     **kwargs:
     cmp - str (optional): compression shorthand (bz2, gz, xz).
     individual - bool: changes how items in src are evaluated (literal).
+    zip_file - bool: decides whether to use zipfile or tarfile.
     dry_run - bool: whether to actually run, or just print expected results.
 
 
