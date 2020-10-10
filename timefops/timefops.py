@@ -13,7 +13,7 @@ import errno
 import tarfile
 import zipfile
 from datetime import datetime as dt
-from _logger import init_logging 
+from ._logger import init_logging 
 
 
 class Timefops:
