@@ -10,7 +10,7 @@ setup(
     url="https://github.com/stiftcast/timefops",
     author="stiftcast",
     author_email="stiftcast@gmail.com",
-    version="0.2",
+    version="0.3",
     license="GPLv3",
     description="A cross-platform module for file operations based on time.",
     long_description=long_description,
