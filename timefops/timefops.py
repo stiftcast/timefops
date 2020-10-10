@@ -67,11 +67,11 @@ class Timefops:
         *args:
         f - dict; (use the output of path_time_map())
 
-        Will rename any files/folders (by enumerating) if there are any duplicates
-        that fall under the same time string.
+        Will rename any files/folders (by enumerating) if there are any 
+        duplicates that fall under the same time string.
 
         Returns:
-        dict - {absolute_path: basename (renamed using add_enumerate, if needed.)}
+        dict - {absolute_path: basename (renamed using add_enumerate)}
         """
         basename_map = {x: os.path.basename(x) for x in f}
 
@@ -79,14 +79,17 @@ class Timefops:
         for fn, date in f.items():
             filter_dict[os.path.basename(fn)].update({fn: date})
 
-        to_rename = collections.defaultdict(lambda: collections.defaultdict(list))
+        to_rename = collections.defaultdict(
+                lambda: collections.defaultdict(list))
+
         for key, val in filter_dict.items():
             if len(val) > 1:
                 for date, occur in collections.Counter(val.values()).items():
                     if occur > 1:
                         for subk, subv in val.items():
                             if subv == date:
-                                to_rename[subv][os.path.basename(subk)].append(subk)
+                                to_rename[subv][os.path.basename(subk)
+                                        ].append(subk)
 
         for d, i in to_rename.items():
             for bn, p in i.items():
@@ -128,7 +131,7 @@ class Timefops:
                 sys.exit(1)
 
         file_time_map = self.path_time_map(src, f"get{method}", fmt,
-                                      individual=individual)
+                                           individual=individual)
 
         rename_map = self._rename_duplicates(file_time_map)[0]
 
@@ -177,7 +180,7 @@ class Timefops:
         """
 
         file_time_map = self.path_time_map(src, f"get{method}", fmt,
-                                      individual=individual)
+                                           individual=individual)
 
         rename_map = self._rename_duplicates(file_time_map)[0]
 
@@ -232,6 +235,7 @@ class Timefops:
         cmp_sh - str (optional): compression shorthand (bz2, gz, xz).
         individual - bool: changes how items in src are evaluated (literal).
         zip_file - bool: decides whether to use zipfile or tarfile.
+        to_stdout - bool: if True, prints binary output to stdout.
         dry_run - bool: whether to actually run, or just print expected results.
 
 
@@ -241,7 +245,7 @@ class Timefops:
         compressed by passing a valid compression method to 'cmp_sh'.
         """
         file_time_map = self.path_time_map(src, f"get{method}", fmt,
-                                      individual=individual)
+                                           individual=individual)
 
         rename_map = self._rename_duplicates(file_time_map)
 
