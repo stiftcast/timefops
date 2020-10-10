@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """Sorting files by time, made easy.
     Gets last access/creation/modification time from file(s) and/or folder(s),
     then either moves, copies or archives them to a new location, sorting them
@@ -8,258 +6,287 @@
 """
 
 import os
+import sys
 import collections
 import shutil
 import errno
 import tarfile
 import zipfile
 from datetime import datetime as dt
+from _logger import init_logging 
 
 
-def find_mount_point(path):
-    """This function returns the root for a directory."""
-    path = os.path.abspath(path)
-    while not os.path.ismount(path):
-        path = os.path.dirname(path)
-    return path
+class Timefops:
+    def __init__(self, log_level):
+        self.log = init_logging(log_level, name=__name__)
+    
+
+    @staticmethod
+    def find_mount_point(path):
+        """This function returns the root for a directory."""
+        path = os.path.abspath(path)
+        while not os.path.ismount(path):
+            path = os.path.dirname(path)
+        return path
 
 
-def add_enumerate(f, num):
-    """Seperates a path and adds 'num' in the right spot, used for renaming."""
-    name, suffix = os.path.splitext(f)
-    return "{}({}){}".format(name, num, suffix)
+    @staticmethod
+    def add_enumerate(f, num):
+        """Seperates a path and adds 'num' in the right spot, used for renaming."""
+        name, suffix = os.path.splitext(f)
+        return "{}({}){}".format(name, num, suffix)
 
 
-def path_time_map(src, method, fmt, individual=False):
-    """
-    *args:
-    src - list: list of paths.
-    method - str: 'os.path' function to use (getatime, getctime, getmtime) .
-    fmt - str: datetime format identitfier.
+    @staticmethod
+    def path_time_map(src, method, fmt, individual=False):
+        """
+        *args:
+        src - list: list of paths.
+        method - str: 'os.path' function to use (getatime, getctime, getmtime) .
+        fmt - str: datetime format identitfier.
 
-    **kwargs:
-    individual - bool: changes how items in src are evaluated (literal).
+        **kwargs:
+        individual - bool: changes how items in src are evaluated (literal).
 
-    Maps the file/folder path to a time str, determined by the 'fmt' argument.
+        Maps the file/folder path to a time str, determined by the 'fmt' argument.
 
-    Returns:
-    { absolute_path: [acm]time of object (str; determined by 'fmt' arg) }
-    """
-    if individual:
-        return {os.path.abspath(x): dt.fromtimestamp(getattr(
-            os.path, method)(x)).strftime(fmt) for x in src}
-    else:
-        return {os.path.abspath(y): dt.fromtimestamp(getattr(
-            os.path, method)(y)).strftime(fmt) for x in list(
-                (os.scandir(path) for path in src)) for y in x}
-
-
-def rename_duplicates(f):
-    """
-    *args:
-    f - dict; (use the output of path_time_map())
-
-    Will rename any files/folders (by enumerating) if there are any duplicates
-    that fall under the same time string.
-
-    Returns:
-    dict - {absolute_path: basename (renamed using add_enumerate, if needed.)}
-    """
-    basename_map = {x: os.path.basename(x) for x in f}
-
-    filter_dict = collections.defaultdict(dict)
-    for fn, date in f.items():
-        filter_dict[os.path.basename(fn)].update({fn: date})
-
-    to_rename = collections.defaultdict(lambda: collections.defaultdict(list))
-    for key, val in filter_dict.items():
-        if len(val) > 1:
-            for date, occur in collections.Counter(val.values()).items():
-                if occur > 1:
-                    for subk, subv in val.items():
-                        if subv == date:
-                            to_rename[subv][os.path.basename(subk)].append(subk)
-
-    for d, i in to_rename.items():
-        for bn, p in i.items():
-            for k, v in enumerate(p):
-                if k > 0:
-                    basename_map[v] = add_enumerate(os.path.basename(v), k)
-                else:
-                    basename_map[v] = os.path.basename(v)
-
-    return basename_map, to_rename
-
-
-def move(src, dst, method, fmt, individual=False, dry_run=False):
-    """
-    *args:
-    src - list: directories/filenames.
-    dst - str: destination directory path.
-    fmt - str: datetime format identitfier.
-
-    **kwargs:
-    cmp - str (optional): compression shorthand (bz2, gz, xz).
-    individual - bool: changes how items in src are evaluated (literal).
-    dry_run - bool: whether to actually run, or just print expected results.
-
-
-    Moves files/folders & puts them in folders by a date defined by the
-    method parameter (atime, ctime, mtime) and fmt (format identifier).
-
-    This function will raise an Exception if the source and dest. paths are
-    on different drives/filesystems, this was done as a precaution due to
-    unexpected behaviour. To get around this, just use _copy() instead.
-    """
-
-    # Make sure moving is local only (all platforms)
-    for path in src:
-        if find_mount_point(path) != find_mount_point(dst):
-            raise UserWarning("For transferring files to a different "
-                              "filesystem, use the copy function.")
-
-    file_time_map = path_time_map(src, "get{}".format(method), fmt,
-                                  individual=individual)
-
-    rename_map = rename_duplicates(file_time_map)[0]
-
-    if dry_run:
-        print("Creating directories based on {}.\n".format(method))
-        print("# of items to be moved: {}\n".format(len(file_time_map)))
-        print("Item list:")
-
-    # Move the associated items to the designated path.
-    for n, (i, p) in enumerate(file_time_map.items(), 1):
-        target_dir = os.path.join(dst, p)
-        if not dry_run:
-            os.makedirs(target_dir, exist_ok=True)
-            try:
-                shutil.move(i, os.path.join(target_dir, rename_map.get(i)))
-            except PermissionError:
-                print("You dont have the proper permissions to move: '{}', "
-                      "skipping.".format(i))
+        Returns:
+        { absolute_path: [acm]time of object (str; determined by 'fmt' arg) }
+        """
+        if individual:
+            return {os.path.abspath(x): dt.fromtimestamp(getattr(
+                os.path, method)(x)).strftime(fmt) for x in src}
         else:
-            print("{}. {} --> {}".format(
-                n, os.path.relpath(i), os.path.join(target_dir,
-                                                    rename_map.get(i))
-            ))
+            return {os.path.abspath(y): dt.fromtimestamp(getattr(
+                os.path, method)(y)).strftime(fmt) for x in list(
+                    (os.scandir(path) for path in src)) for y in x}
 
 
-def copy(src, dst, method, fmt, individual=False, dry_run=False):
-    """
-    *args:
-    src - list: directories/filenames.
-    dst - str: destination directory path.
-    fmt - str: datetime format identitfier.
+    def _rename_duplicates(self, f):
+        """
+        *args:
+        f - dict; (use the output of path_time_map())
 
-    **kwargs:
-    cmp - str (optional): compression shorthand (bz2, gz, xz).
-    individual - bool: changes how items in src are evaluated (literal).
-    dry_run - bool: whether to actually run, or just print expected results.
+        Will rename any files/folders (by enumerating) if there are any duplicates
+        that fall under the same time string.
 
+        Returns:
+        dict - {absolute_path: basename (renamed using add_enumerate, if needed.)}
+        """
+        basename_map = {x: os.path.basename(x) for x in f}
 
-    Copies files/folders & puts them in folders by last by a date defined by
-    the method parameter (atime, ctime, mtime) and fmt (format identifier).
-    """
+        filter_dict = collections.defaultdict(dict)
+        for fn, date in f.items():
+            filter_dict[os.path.basename(fn)].update({fn: date})
 
-    file_time_map = path_time_map(src, "get{}".format(method), fmt,
-                                  individual=individual)
+        to_rename = collections.defaultdict(lambda: collections.defaultdict(list))
+        for key, val in filter_dict.items():
+            if len(val) > 1:
+                for date, occur in collections.Counter(val.values()).items():
+                    if occur > 1:
+                        for subk, subv in val.items():
+                            if subv == date:
+                                to_rename[subv][os.path.basename(subk)].append(subk)
 
-    rename_map = rename_duplicates(file_time_map)[0]
+        for d, i in to_rename.items():
+            for bn, p in i.items():
+                for k, v in enumerate(p):
+                    if k > 0:
+                        basename_map[v] = add_enumerate(os.path.basename(v), k)
+                    else:
+                        basename_map[v] = os.path.basename(v)
 
-    if dry_run:
-        print("Creating directories based on {}.\n".format(method))
-        print("# of items to be copied: {}\n".format(len(file_time_map)))
-        print("Item list:")
-
-    # Copy the associated items to the designated path.
-    for n, (i, p) in enumerate(file_time_map.items(), 1):
-        target_dir = os.path.join(dst, p)
-        if not dry_run:
-            os.makedirs(target_dir, exist_ok=True)
-            try:
-                shutil.copytree(i, os.path.join(target_dir, rename_map.get(i)))
-            except PermissionError:
-                print("You dont have the proper permissions to copy the "
-                      "directory: '{}', skipping.".format(os.path.relpath(i)))
-            except OSError as exc:
-                # If not a directory, copy the file(s)
-                if exc.errno == errno.ENOTDIR:
-                    try:
-                        shutil.copy2(i, os.path.join(target_dir,
-                                                     rename_map.get(i)))
-                    except PermissionError:
-                        print("You dont have the proper permissions to copy "
-                              "the file: '{}', skipping."
-                              .format(os.path.relpath(i))
-                              )
-        else:
-            print("{}. {} --> {}".format(
-                n, os.path.relpath(i), os.path.join(target_dir,
-                                                    rename_map.get(i))
-            ))
+        return basename_map, to_rename
 
 
-def archive(src, dst, method, fmt, cmp="", individual=False, zip_file=False,
-            dry_run=False):
-    """
-    *args:
-    src - list: directories/filenames.
-    dst - str: destination directory path.
-    fmt - str: datetime format identitfier.
+    def move(self, src, dst, method, fmt, individual=False, dry_run=False):
+        """
+        *args:
+        src - list: directories/filenames.
+        dst - str: destination directory path.
+        fmt - str: datetime format identitfier.
 
-    **kwargs:
-    cmp - str (optional): compression shorthand (bz2, gz, xz).
-    individual - bool: changes how items in src are evaluated (literal).
-    zip_file - bool: decides whether to use zipfile or tarfile.
-    dry_run - bool: whether to actually run, or just print expected results.
+        **kwargs:
+        cmp - str (optional): compression shorthand (bz2, gz, xz).
+        individual - bool: changes how items in src are evaluated (literal).
+        dry_run - bool: whether to actually run, or just print expected results.
 
 
-    Makes a tar archive containing the files/folders specified in 'src' nested
-    under folders by a date defined by the 'method' parameter
-    (atime, ctime, mtime) and fmt (format identifier). This archive can be
-    compressed by passing a valid compression method to 'cmp'.
-    """
-    file_time_map = path_time_map(src, "get{}".format(method), fmt,
-                                  individual=individual)
+        Moves files/folders & puts them in folders by a date defined by the
+        method parameter (atime, ctime, mtime) and fmt (format identifier).
 
-    rename_map = rename_duplicates(file_time_map)
+        This function will raise an Exception if the source and dest. paths are
+        on different drives/filesystems, this was done as a precaution due to
+        unexpected behaviour. To get around this, just use _copy() instead.
+        """
 
-    if not dry_run:
-        # Put the associated items into either a tar archive or a zip file,
-        # nesting the items under the designated path.
-        if zip_file:
-            cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
-                            "xz" : zipfile.ZIP_LZMA}
+        # Make sure moving is local only (all platforms)
+        for path in src:
+            if self.find_mount_point(path) != self.find_mount_point(dst):
+                self.log.error("For transferring files to a different "
+                               "filesystem, use the copy function.")
+                sys.exit(1)
 
-            with zipfile.ZipFile(dst, mode="x", 
-                                 compression=cmp_mappings.get(cmp,
-                                     zipfile.ZIP_STORED)) as z:
-                for i, p in file_time_map.items():
-                    try:
-                        z.write(i, os.path.join(p, rename_map[0].get(i)))
-                    except PermissionError:
-                        print("You dont have the proper permissions to add: "
-                              f"'{i}' to the zip file, skipping.")
-        else:
-            with tarfile.open(dst, mode=f"x:{cmp}" if cmp else "x") as t:
-                for i, p in file_time_map.items():
-                    try:
-                        t.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
-                    except PermissionError:
-                        print("You dont have the proper permissions to add: "
-                              f"'{i}' to the archive, skipping.")
-    else:
-        print("Creating directories based on {}.\n".format(method))
-        print("# of items to be archived: {}".format(len(file_time_map)),
-              end='')
-        if cmp:
-            print("; using '{}' compression.".format(cmp), end='')
-        print("\n\nItem list:")
+        file_time_map = self.path_time_map(src, f"get{method}", fmt,
+                                      individual=individual)
 
+        rename_map = self._rename_duplicates(file_time_map)[0]
+
+        if dry_run:
+            self.log.info(f"Creating directories based on {method}.\n")
+            self.log.info("Item list:")
+
+        # Move the associated items to the designated path.
         for n, (i, p) in enumerate(file_time_map.items(), 1):
             target_dir = os.path.join(dst, p)
-            print("{}. {} --> {}".format(
-                n, os.path.relpath(i), os.path.relpath(os.path.join(
-                    target_dir, rename_map[0].get(i)))
-            ))
+            if not dry_run:
+                os.makedirs(target_dir, exist_ok=True)
+                try:
+                    shutil.move(i, os.path.join(target_dir, rename_map.get(i)))
+                    self.log.verbose("successfully moved: "
+                                    f"{os.path.relpath(i)}")
+                except PermissionError:
+                    self.log.warning("Insufficient permissions "
+                                    f"to move: '{os.path.relpath(i)}', "
+                                    "skipping.")
+            else:
+                self.log.info("{}. {} --> {}".format(
+                    n, os.path.relpath(i), os.path.join(target_dir,
+                                                        rename_map.get(i))
+                ))
+
+        if dry_run:
+            self.log.info(f"\n# of items to be moved: {len(file_time_map)}")
+
+
+    def copy(self, src, dst, method, fmt, individual=False, dry_run=False):
+        """
+        *args:
+        src - list: directories/filenames.
+        dst - str: destination directory path.
+        fmt - str: datetime format identitfier.
+
+        **kwargs:
+        cmp - str (optional): compression shorthand (bz2, gz, xz).
+        individual - bool: changes how items in src are evaluated (literal).
+        dry_run - bool: whether to actually run, or just print expected results.
+
+
+        Copies files/folders & puts them in folders by last by a date defined by
+        the method parameter (atime, ctime, mtime) and fmt (format identifier).
+        """
+
+        file_time_map = self.path_time_map(src, f"get{method}", fmt,
+                                      individual=individual)
+
+        rename_map = self._rename_duplicates(file_time_map)[0]
+
+        if dry_run:
+            self.log.info(f"Creating directories based on {method}.\n")
+            self.log.info("Item list:")
+
+        # Copy the associated items to the designated path.
+        for n, (i, p) in enumerate(file_time_map.items(), 1):
+            target_dir = os.path.join(dst, p)
+            if not dry_run:
+                os.makedirs(target_dir, exist_ok=True)
+                try:
+                    shutil.copytree(i, os.path.join(target_dir, 
+                                                    rename_map.get(i)))
+                    self.log.verbose(f"done copying: {os.path.relpath(i)}")
+                except PermissionError:
+                    self.log.warning("Insufficient permissions to copy the "
+                                     f"directory: '{os.path.relpath(i)}', "
+                                     "skipping.")
+                except OSError as exc:
+                    # If not a directory, copy the file(s)
+                    if exc.errno == errno.ENOTDIR:
+                        try:
+                            shutil.copy2(i, os.path.join(target_dir,
+                                                         rename_map.get(i)))
+                            self.log.verbose(f"successfully copied: "
+                                              "{os.path.relpath(i)}")
+                        except PermissionError:
+                            self.log.warning("Insufficient permissions to copy "
+                                            f"the file: '{os.path.relpath(i)}',"
+                                             " skipping.")
+            else:
+                self.log.info("{}. {} --> {}".format(
+                              n, os.path.relpath(i), os.path.join(target_dir,
+                                                     rename_map.get(i))
+                ))
+            
+        if dry_run:
+            self.log.info(f"\n# of items to be copied: {len(file_time_map)}")
+
+
+    def archive(self, src, dst, method, fmt, cmp_sh="", individual=False, 
+                zip_file=False, to_stdout=False, dry_run=False):
+        """
+        *args:
+        src - list: directories/filenames.
+        dst - str: destination directory path.
+        fmt - str: datetime format identitfier.
+
+        **kwargs:
+        cmp_sh - str (optional): compression shorthand (bz2, gz, xz).
+        individual - bool: changes how items in src are evaluated (literal).
+        zip_file - bool: decides whether to use zipfile or tarfile.
+        dry_run - bool: whether to actually run, or just print expected results.
+
+
+        Makes a tar archive containing the files/folders specified in 'src' nested
+        under folders by a date defined by the 'method' parameter
+        (atime, ctime, mtime) and fmt (format identifier). This archive can be
+        compressed by passing a valid compression method to 'cmp_sh'.
+        """
+        file_time_map = self.path_time_map(src, f"get{method}", fmt,
+                                      individual=individual)
+
+        rename_map = self._rename_duplicates(file_time_map)
+
+        if not dry_run:
+            # Put the associated items into either a tar archive or a zip file,
+            # nesting the items under the designated path.
+            if zip_file:
+                cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
+                                "xz" : zipfile.ZIP_LZMA}
+                with zipfile.ZipFile(dst, mode="x",
+                                     compression=cmp_mappings.get(cmp_sh,
+                                         zipfile.ZIP_STORED)) as z:
+                    for i, p in file_time_map.items():
+                        try:
+                            z.write(i, os.path.join(p, rename_map[0].get(i)))
+                            self.log.verbose(f"added: {os.path.join(p, rename_map[0].get(i))}")
+                        except PermissionError:
+                            self.log.warning("Insufficient permissions to add: "
+                                  f"'{os.path.relpath(i)}', skipping.")
+            else:
+                with tarfile.open(dst, mode=f"x:{cmp_sh}" if cmp_sh else "x",
+                                  fileobj=sys.stdout.buffer if to_stdout else None) as t:
+                    for i, p in file_time_map.items():
+                        try:
+                            t.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
+                            if not to_stdout:
+                                # Cant log to stdout while redirecting tar file  
+                                self.log.verbose(f"added: {os.path.join(p, rename_map[0].get(i))}")
+                        except PermissionError:
+                            self.log.warning("Insufficient permissions to add: "
+                                  f"'{os.path.relpath(i)}', skipping.")
+        else:
+            self.log.info(f"Creating directories based on {method}.\n")
+            if to_stdout:
+                self.log.info("writing to stdout...")
+            else:
+                self.log.info(f"writing to file: '{os.path.relpath(dst)}'")
+            if cmp_sh:
+                self.log.info(f"- using '{cmp_sh}' compression.")
+            self.log.info("\nItem list:")
+
+            for n, (i, p) in enumerate(file_time_map.items(), 1):
+                target_dir = os.path.join(dst, p)
+                self.log.info("{}. {} --> {}".format(
+                    n, os.path.relpath(i), os.path.relpath(os.path.join(
+                        target_dir, rename_map[0].get(i)))
+                ))
+            self.log.info(f"\n# of items to be archived: {len(file_time_map)}")

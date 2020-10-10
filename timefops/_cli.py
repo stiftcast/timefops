@@ -1,18 +1,13 @@
 import argparse
 import os
 import sys
-from . import __version__, archive, copy, move
-
-
-TRANSLATIONS = {"atime": "access-time",
-                "ctime": "change-time",
-                "mtime": "modified-time"}
+from . import Timefops, __version__, TRANSLATIONS
 
 
 def cli(argv):
     main_parser = argparse.ArgumentParser(
         description="Operate on files/directories based on their "
-                    "access/change/modified times.",
+                    "access/change/modified dates.",
         formatter_class=argparse.RawTextHelpFormatter)
 
     main_parser.add_argument("-V", "--version",
@@ -42,19 +37,19 @@ def cli(argv):
         description="Perform operations based on last modification-time.")
 
     dyn_opts = locals()
-    
+
     for p in ('atime_parser', 'ctime_parser', 'mtime_parser'):
-        
+
         exec(f"{p}.add_argument('-V', '--version', action='version',"
              "version=f'{__version__}', "
              "help='print version number/info and exit')",
              globals(), dyn_opts)
-        
+
         exec(f"ops_{p} = {p}.add_subparsers("
                  "title='Operations', dest='operation', metavar='<operation>', "
                  "required=True)",
              globals(), dyn_opts)
-        
+
         exec(f"archive_ops_{p} = ops_{p}.add_parser("
                  "'archive',"
                  "help='Archive contents to a tarball, with '"
@@ -73,46 +68,53 @@ def cli(argv):
 
         exec(f"move_ops_{p} = ops_{p}.add_parser("
                 "'move',"
-                "help='Move contents to a different location.',"
-                "description='Move contents to a different location, '"
+                "help='Move contents to a different (local) location.',"
+                "description='Move contents to a different (local) location, '"
                       f"'sorted by {TRANSLATIONS.get(str(p).split('_')[0])}.')",
              globals(), dyn_opts)
-          
+
     # base arguments for archive operation.
     for arc_p in (dyn_opts["archive_ops_atime_parser"],
                   dyn_opts["archive_ops_ctime_parser"],
                   dyn_opts["archive_ops_mtime_parser"]):
 
         gen_arc_args = arc_p.add_argument_group("General arguments")
-
+        tar_specific_args = gen_arc_args.add_mutually_exclusive_group()
 
         arc_p.add_argument("-V", "--version",
                            action="version",
                            version=f"{__version__}",
                            help="print version number/info and exit")
-        
+
         gen_arc_args.add_argument("src",
                                   type=str,
                                   nargs='+',
                                   help="Source directories/files.")
-        
-        gen_arc_args.add_argument("-a", "--archive",
-                                  type=str,
-                                  dest='archive',
-                                  required=True,
-                                  help="Name for target archive.")
+
+        tar_specific_args.add_argument("-a", "--archive",
+                                       type=str,
+                                       dest='archive',
+                                       default="",
+                                       help="Name for target archive.")
+
+        tar_specific_args.add_argument("--to-stdout",
+                                       action="store_true",
+                                       help="Write tar archive to stdout "
+                                            "instead of a named file, "
+                                            "emulates the '-' option of "
+                                            "GNU tar.")
 
         gen_arc_args.add_argument("-c", "--compression",
                                   choices=("bz2", "gz", "xz"),
                                   type=str.lower,
                                   help="Compression format for the archive.")
-        
-        gen_arc_args.add_argument("-z", "--zipfile",
+
+        tar_specific_args.add_argument("-z", "--zipfile",
                                   action="store_true",
                                   help="If set, makes a zip file instead of a "
                                        "tar archive, note that GZ compression "
                                        "is not available with this option.")
-        
+
         gen_arc_args.add_argument("-f", "--format",
                                   type=str,
                                   default="%Y-%m-%d",
@@ -129,10 +131,23 @@ def cli(argv):
                                        " will not be traversed and instead be "
                                        "treated as a standalone item.")
 
+        gen_arc_args.add_argument("-v", "--verbose",
+                                  action="store_const",
+                                  const=15,
+                                  default=20,
+                                  help="Get verbose output.")
+
+        gen_arc_args.add_argument("-d", "--debug",
+                                  action="store_const",
+                                  const=5,
+                                  default=20,
+                                  help="Print debug information "
+                                       "(this includes verbose as well) - "
+                                       "useful for development.")
+
         gen_arc_args.add_argument("--dry-run",
                                   action="store_true",
                                   help="Show results, but don't execute.")
-
 
     # base arguments for copy/move operations.
     for cm_p in (dyn_opts["copy_ops_atime_parser"],
@@ -144,7 +159,6 @@ def cli(argv):
 
         gen_cm_args = cm_p.add_argument_group("General arguments")
 
-
         cm_p.add_argument("-V", "--version",
                           action="version",
                           version=f"{__version__}",
@@ -154,7 +168,7 @@ def cli(argv):
                                  type=str,
                                  nargs='+',
                                  help="Source directories/files.")
-        
+
         gen_cm_args.add_argument("-t", "--target-directory",
                                  type=str,
                                  required=True,
@@ -176,11 +190,25 @@ def cli(argv):
                                       "will not be traversed and instead be "
                                       "treated as a standalone item.")
 
+        gen_cm_args.add_argument("-v", "--verbose",
+                                 action="store_const",
+                                 const=15,
+                                 default=20,
+                                 help="Get verbose output.")
+
+        gen_cm_args.add_argument("-d", "--debug",
+                                 action="store_const",
+                                 const=5,
+                                 default=20,
+                                 help="Print debug information "
+                                      "(this includes verbose as well) - "
+                                      "useful for development.")
+
         gen_cm_args.add_argument("--dry-run",
                                  action="store_true",
                                  help="Show results, but don't execute.")
 
-        
+
     opts = main_parser.parse_args(argv)
 
     parser = dyn_opts[f"{opts.operation}_ops_{opts.time}_parser"]
@@ -200,40 +228,45 @@ def cli(argv):
                 parser.error(f"src dir '{path}' is unable to be traversed.")
 
     if opts.operation == "archive":
-        if os.path.exists(opts.archive):
-            parser.error(f"file '{opts.archive}' already exists.")
+        if opts.archive:
+            if os.path.exists(opts.archive):
+                parser.error(f"file '{opts.archive}' already exists.")
 
-        if opts.zipfile:
-            if opts.compression == "gz":
-                parser.error("'gz' compression not available with -z/--zipfile")
-            if not opts.archive.endswith(".zip"):
-                opts.archive = opts.archive + ".zip"
+            if opts.zipfile:
+                if opts.compression == "gz":
+                    parser.error("'gz' compression not available with -z/--zipfile")
+                if not opts.archive.endswith(".zip"):
+                    opts.archive = opts.archive + ".zip"
+            else:
+                if not opts.compression and not opts.archive.endswith(".tar"):
+                    opts.archive = opts.archive + ".tar"
+
+                elif opts.compression and not opts.archive.endswith(
+                        f".tar.{opts.compression}"):
+                    opts.archive = opts.archive + f".tar.{opts.compression}"
+
+            dir_tree = tuple(filter(None, os.path.split(opts.archive)))
+
+            if len(dir_tree) > 1:
+                # if the parent path doesn't exist...
+                if not os.path.isdir(dir_tree[0]):
+                    parser.error(f"cannot make file: '{opts.archive}'.")
+            else:
+                opts.archive = os.path.join(os.getcwd(), dir_tree[0])
+
+            # Make sure the file doesn't exist after (possibly) adding suffix
+            if os.path.isfile(opts.archive):
+                parser.error(f"file '{opts.archive}' already exists.")
+
+            if not os.access(os.path.dirname(opts.archive), os.W_OK | os.X_OK):
+                parser.error("directory where archive is to be created is not "
+                             "writable/executable, unable to make archive here.")
+        elif opts.to_stdout:
+            if not opts.compression:
+                parser.error("--to-stdout requires compression option (with -c/--compression)")
         else:
-            if not opts.compression and not opts.archive.endswith(".tar"):
-                opts.archive = opts.archive + ".tar"
-
-            elif opts.compression and not opts.archive.endswith(
-                    f".tar.{opts.compression}"):
-                opts.archive = opts.archive + f".tar.{opts.compression}"
-
-        dir_tree = tuple(filter(None, os.path.split(opts.archive)))
-
-        if len(dir_tree) > 1:
-            # if the parent path doesn't exist...
-            if not os.path.isdir(dir_tree[0]):
-                parser.error(f"cannot make file: '{opts.archive}'.")
-        else:
-            opts.archive = os.path.join(os.getcwd(), dir_tree[0])
-
-        # Make sure the file doesn't exist after (possibly) adding suffix
-        if os.path.isfile(opts.archive):
-            parser.error(f"file '{opts.archive}' already exists.")
-
-        if not os.access(os.path.dirname(opts.archive), os.W_OK | os.X_OK):
-            parser.error("directory where archive is to be created is not "
-                         "writable/executable, unable to make archive here.")
+            parser.error("either one of -a/--archive or --to-stdout is required.")
     else:
-
         if not os.path.isdir(opts.target_directory):
             parser.error(f"dest. directory '{opts.target_directory}' not "
                          "understood/does not exist.")
@@ -245,19 +278,22 @@ def cli(argv):
 
 def main():
     args = cli(sys.argv[1::])
+    tfops = Timefops(min(args.debug, args.verbose))
 
     if args.operation == "archive":
-        archive(args.src, args.archive, args.time, args.format,
-                individual=args.individual_items, cmp=args.compression,
-                zip_file=args.zipfile, dry_run=args.dry_run)
-        
+        tfops.archive(args.src, args.archive, args.time, args.format,
+                      individual=args.individual_items, cmp_sh=args.compression,
+                      zip_file=args.zipfile, to_stdout=args.to_stdout,
+                      dry_run=args.dry_run)
+
     elif args.operation == "copy":
-        copy(args.src, args.target_directory, args.time, args.format,
+        tfops.copy(args.src, args.target_directory, args.time, args.format,
              individual=args.individual_items, dry_run=args.dry_run)
 
     elif args.operation == "move":
-        try:
-            move(args.src, args.target_directory, args.time, args.format,
-             individual=args.individual_items, dry_run=args.dry_run)
-        except UserWarning as err:
-            print(err)
+        tfops.move(args.src, args.target_directory, args.time, args.format,
+                   individual=args.individual_items, dry_run=args.dry_run)
+
+
+if __name__ == "__main__":
+    main()

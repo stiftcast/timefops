@@ -1,6 +1,10 @@
-__all__ = ["archive", "copy", "move"]
+__all__ = ["Timefops"]
 __author__ = "stiftcast"
 __license__ = "GPLv3"
-__version__ = "0.2"
+__version__ = "0.3"
 
-from .timefops import archive, copy, move
+TRANSLATIONS = {"atime": "access-time",
+                "ctime": "change-time",
+                "mtime": "modified-time"}
+
+from .timefops import Timefops
