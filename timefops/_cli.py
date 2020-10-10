@@ -12,7 +12,7 @@ TRANSLATIONS = {"atime": "access-time",
 def cli(argv):
     main_parser = argparse.ArgumentParser(
         description="Operate on files/directories based on their "
-                    "access/change/modified dates.",
+                    "access/change/modified times.",
         formatter_class=argparse.RawTextHelpFormatter)
 
     main_parser.add_argument("-V", "--version",
@@ -73,8 +73,8 @@ def cli(argv):
 
         exec(f"move_ops_{p} = ops_{p}.add_parser("
                 "'move',"
-                "help='Move contents to a different (local) location.',"
-                "description='Move contents to a different (local) location, '"
+                "help='Move contents to a different location.',"
+                "description='Move contents to a different location, '"
                       f"'sorted by {TRANSLATIONS.get(str(p).split('_')[0])}.')",
              globals(), dyn_opts)
           
