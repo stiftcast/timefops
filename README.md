@@ -3,15 +3,14 @@
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/timefops.svg)](https://pypi.python.org/pypi/timefops)
 [![PyPI license](https://img.shields.io/pypi/l/timefops.svg)](https://pypi.python.org/pypi/timefops/)
 
-Performs file operations (moving, copying and archiving) on files/directories based on their access/change/modified dates.
+Performs file operations (moving, copying and archiving) on files/directories based on their access/change/modified times.
 
 ## Description
-This program provides moving, copying and archiving capabilities for files/directories based on their access time, change time or modified time.
+_timefops_ provides moving, copying and archiving capabilities for files/directories based on their access time, change time or modified time.
 
-The CLI interface contains nested sub-parsers where you'll be required to choose the time predicate and operation. This program also contains an API (see examples below) for usage in other Python programs, though its recommended to use the CLI, as that is how the program is designed to be used.
+The interface contains nested sub-parsers where you'll be required to choose the time predicate and operation. Both the copying and moving functionality utilize Python's `shutil` module, whereas the`tarfile` and `zipfile` modules are both used for creating archives.
 
-
-Both the copying and moving functionality utilize Python's `shutil` module, whereas the `tarfile` module is used for creating tar archives.
+Platforms: Linux, Windows; compatibilty with Mac OS is unknown.
 
 Python 3.7+ is required. 
 
@@ -108,22 +107,6 @@ General arguments:
 ```
 ## Examples
 
-### API
-```python
-import timefops
-
-# For archiving:
-timefops.archive([list_of_dirs], dest_dir, "atime", "%Y-%m-%d", cmp="gz", individual=False, dry_run=False)
-
-# For copying:
-timefops.copy([list_of_dirs], dest_dir, "ctime", "%Y-%m-%d", individual=False, dry_run=False)
-
-# For moving:
-timefops.move([list_of_dirs], dest_dir, "mtime", "%Y-%m-%d", individual=False, dry_run=False)
-
-# NOTE: if individual=True, then the iterable [list_of_dirs] can also contain paths to files.
-```
-### CLI
 The provided commands can either be used on their own, or with the `find` and `xargs` commands in tandem. The latter is the recommended method, due to find's powerful filtering options.<br />
 
 #### Standalone
