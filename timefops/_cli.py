@@ -79,7 +79,8 @@ def cli(argv):
                   dyn_opts["archive_ops_mtime_parser"]):
 
         gen_arc_args = arc_p.add_argument_group("General arguments")
-        tar_specific_args = gen_arc_args.add_mutually_exclusive_group()
+        bin_out_args = gen_arc_args.add_mutually_exclusive_group()
+        
 
         arc_p.add_argument("-V", "--version",
                            action="version",
@@ -91,25 +92,25 @@ def cli(argv):
                                   nargs='+',
                                   help="Source directories/files.")
 
-        tar_specific_args.add_argument("-a", "--archive",
-                                       type=str,
-                                       dest='archive',
-                                       default="",
-                                       help="Name for target archive.")
+        gen_arc_args.add_argument("-a", "--archive",
+                                  type=str,
+                                  dest='archive',
+                                  default="",
+                                  help="Name for target archive.")
 
-        tar_specific_args.add_argument("--to-stdout",
-                                       action="store_true",
-                                       help="Write tar archive to stdout "
-                                            "instead of a named file, "
-                                            "emulates the '-' option of "
-                                            "GNU tar.")
+        bin_out_args.add_argument("--to-stdout",
+                                  action="store_true",
+                                  help="Write tar archive to stdout "
+                                       "instead of a named file, "
+                                       "emulates the '-' option of "
+                                       "GNU tar.")
 
         gen_arc_args.add_argument("-c", "--compression",
                                   choices=("bz2", "gz", "xz"),
                                   type=str.lower,
                                   help="Compression format for the archive.")
 
-        tar_specific_args.add_argument("-z", "--zipfile",
+        bin_out_args.add_argument("-z", "--zipfile",
                                   action="store_true",
                                   help="If set, makes a zip file instead of a "
                                        "tar archive, note that GZ compression "
@@ -228,7 +229,7 @@ def cli(argv):
                 parser.error(f"src dir '{path}' is unable to be traversed.")
 
     if opts.operation == "archive":
-        if opts.archive:
+        if opts.archive and not opts.to_stdout:
             if os.path.exists(opts.archive):
                 parser.error(f"file '{opts.archive}' already exists.")
 
@@ -261,7 +262,10 @@ def cli(argv):
             if not os.access(os.path.dirname(opts.archive), os.W_OK | os.X_OK):
                 parser.error("directory where archive is to be created is not "
                              "writable/executable, unable to make archive here.")
-        elif opts.to_stdout:
+        elif opts.archive and opts.to_stdout:
+            parser.error("argument --to-stdout: not allowed with argument -a/--archive")
+
+        elif opts.to_stdout and not opts.archive:
             if not opts.compression:
                 parser.error("--to-stdout requires compression option (with -c/--compression)")
         else:
