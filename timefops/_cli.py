@@ -52,10 +52,9 @@ def cli(argv):
 
         exec(f"archive_ops_{p} = ops_{p}.add_parser("
                  "'archive',"
-                 "help='Archive contents to a tarball, with '"
-                      "'optional compression.',"
-                 "description='Archive contents to a tarball '"
-                             "'(w/ opt. compression), sorted by '"
+                 "help='Archive contents to a tarball or a zip file.',"
+                 "description='Archive contents to a tarball or a zip file, '"
+                             "'sorted by '"
                             f"'{TRANSLATIONS.get(str(p).split('_')[0])}.')",
              globals(), dyn_opts)
 
@@ -68,8 +67,8 @@ def cli(argv):
 
         exec(f"move_ops_{p} = ops_{p}.add_parser("
                 "'move',"
-                "help='Move contents to a different (local) location.',"
-                "description='Move contents to a different (local) location, '"
+                "help='Move contents to a different location.',"
+                "description='Move contents to a different location, '"
                       f"'sorted by {TRANSLATIONS.get(str(p).split('_')[0])}.')",
              globals(), dyn_opts)
 
@@ -92,29 +91,30 @@ def cli(argv):
                                   nargs='+',
                                   help="Source directories/files.")
 
-        gen_arc_args.add_argument("-a", "--archive",
+        bin_out_args.add_argument("-a", "--archive",
                                   type=str,
                                   dest='archive',
                                   default="",
+                                  metavar="NAME",
                                   help="Name for target archive.")
 
         bin_out_args.add_argument("--to-stdout",
                                   action="store_true",
-                                  help="Write tar archive to stdout "
-                                       "instead of a named file, "
+                                  help="Write tar archive or zip file to "
+                                       "stdout instead of a named file, "
                                        "emulates the '-' option of "
-                                       "GNU tar.")
+                                       "the tar and zip executables.")
+
+        gen_arc_args.add_argument("-z", "--zipfile",
+                                  action="store_true",
+                                  help="Makes a zip file instead of a "
+                                       "tar archive (GZ compression "
+                                       "is not available with this option)")
 
         gen_arc_args.add_argument("-c", "--compression",
                                   choices=("bz2", "gz", "xz"),
                                   type=str.lower,
                                   help="Compression format for the archive.")
-
-        bin_out_args.add_argument("-z", "--zipfile",
-                                  action="store_true",
-                                  help="If set, makes a zip file instead of a "
-                                       "tar archive, note that GZ compression "
-                                       "is not available with this option.")
 
         gen_arc_args.add_argument("-f", "--format",
                                   type=str,
@@ -229,7 +229,7 @@ def cli(argv):
                 parser.error(f"src dir '{path}' is unable to be traversed.")
 
     if opts.operation == "archive":
-        if opts.archive and not opts.to_stdout:
+        if opts.archive:
             if os.path.exists(opts.archive):
                 parser.error(f"file '{opts.archive}' already exists.")
 
@@ -262,12 +262,11 @@ def cli(argv):
             if not os.access(os.path.dirname(opts.archive), os.W_OK | os.X_OK):
                 parser.error("directory where archive is to be created is not "
                              "writable/executable, unable to make archive here.")
-        elif opts.archive and opts.to_stdout:
-            parser.error("argument --to-stdout: not allowed with argument -a/--archive")
-
-        elif opts.to_stdout and not opts.archive:
+        elif opts.to_stdout:
             if not opts.compression:
                 parser.error("--to-stdout requires compression option (with -c/--compression)")
+            elif opts.zipfile and opts.compression == "gz":
+                parser.error("'gz' compression not available with -z/--zipfile")
         else:
             parser.error("either one of -a/--archive or --to-stdout is required.")
     else:

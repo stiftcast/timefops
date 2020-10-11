@@ -6,22 +6,25 @@ import os
 import random
 import uuid
 import collections
-from timefops import timefops as tf
+from timefops import Timefops 
 
 
 class TestHelpers(unittest.TestCase):
+    def setUp(self):
+        self.tf = Timefops()
+
     @mock.patch('os.path.ismount')
     def test_one(self, mock_method):
         """Makes sure the function correctly detects the mount point."""
         mock_method.return_value = True
-        self.assertEqual(os.getcwd(), tf.find_mount_point(os.getcwd()))
+        self.assertEqual(os.getcwd(), self.tf.find_mount_point(os.getcwd()))
 
     def test_renaming(self):
         """Ensures enumeration suffix is added in the correct place, depending
         on if the object is a file or a directory.
         """
-        self.assertEqual(tf.add_enumerate("dir", 1), "dir(1)")
-        self.assertEqual(tf.add_enumerate("file.txt", 3), "file(3).txt")
+        self.assertEqual(self.tf.add_enumerate("dir", 1), "dir(1)")
+        self.assertEqual(self.tf.add_enumerate("file.txt", 3), "file(3).txt")
 
     def test_duplicate_handling(self):
         """Ensure that duplicates are handled correctly, so that no dir/file
@@ -42,7 +45,7 @@ class TestHelpers(unittest.TestCase):
         ]))
 
         count_pair = zip(file_count, mock_files)
-        fn_dict, dup_dict = tf.rename_duplicates(test_data)
+        fn_dict, dup_dict = self.tf._rename_duplicates(test_data)
 
         for count, item in count_pair:
             for v, occur in count.items():

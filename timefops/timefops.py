@@ -13,13 +13,13 @@ import errno
 import tarfile
 import zipfile
 from datetime import datetime as dt
-from ._logger import init_logging 
+from ._logger import init_logging
 
 
 class Timefops:
-    def __init__(self, log_level):
+    def __init__(self, log_level=20):
         self.log = init_logging(log_level, name=__name__)
-    
+
 
     @staticmethod
     def find_mount_point(path):
@@ -67,7 +67,7 @@ class Timefops:
         *args:
         f - dict; (use the output of path_time_map())
 
-        Will rename any files/folders (by enumerating) if there are any 
+        Will rename any files/folders (by enumerating) if there are any
         duplicates that fall under the same time string.
 
         Returns:
@@ -95,7 +95,8 @@ class Timefops:
             for bn, p in i.items():
                 for k, v in enumerate(p):
                     if k > 0:
-                        basename_map[v] = add_enumerate(os.path.basename(v), k)
+                        basename_map[v] = self.add_enumerate(
+                                                os.path.basename(v), k)
                     else:
                         basename_map[v] = os.path.basename(v)
 
@@ -194,7 +195,7 @@ class Timefops:
             if not dry_run:
                 os.makedirs(target_dir, exist_ok=True)
                 try:
-                    shutil.copytree(i, os.path.join(target_dir, 
+                    shutil.copytree(i, os.path.join(target_dir,
                                                     rename_map.get(i)))
                     self.log.verbose(f"done copying: {os.path.relpath(i)}")
                 except PermissionError:
@@ -218,12 +219,12 @@ class Timefops:
                               n, os.path.relpath(i), os.path.join(target_dir,
                                                      rename_map.get(i))
                 ))
-            
+
         if dry_run:
             self.log.info(f"\n# of items to be copied: {len(file_time_map)}")
 
 
-    def archive(self, src, dst, method, fmt, cmp_sh="", individual=False, 
+    def archive(self, src, dst, method, fmt, cmp_sh="", individual=False,
                 zip_file=False, to_stdout=False, dry_run=False):
         """
         *args:
@@ -255,13 +256,18 @@ class Timefops:
             if zip_file:
                 cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
                                 "xz" : zipfile.ZIP_LZMA}
-                with zipfile.ZipFile(dst, mode="x",
+                with zipfile.ZipFile(sys.stdout.buffer if to_stdout else dst,
+                                     mode="x",
                                      compression=cmp_mappings.get(cmp_sh,
                                          zipfile.ZIP_STORED)) as z:
                     for i, p in file_time_map.items():
                         try:
                             z.write(i, os.path.join(p, rename_map[0].get(i)))
-                            self.log.verbose(f"added: {os.path.join(p, rename_map[0].get(i))}")
+                            if not to_stdout:
+                                self.log.verbose(
+                                       "added: "
+                                      f"{os.path.join(p,rename_map[0].get(i))}"
+                                )
                         except PermissionError:
                             self.log.warning("Insufficient permissions to add: "
                                   f"'{os.path.relpath(i)}', skipping.")
@@ -272,7 +278,7 @@ class Timefops:
                         try:
                             t.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
                             if not to_stdout:
-                                # Cant log to stdout while redirecting tar file  
+                                # Cant log to stdout while redirecting tar file
                                 self.log.verbose(f"added: {os.path.join(p, rename_map[0].get(i))}")
                         except PermissionError:
                             self.log.warning("Insufficient permissions to add: "
