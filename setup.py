@@ -17,8 +17,10 @@ setup(
     long_description_content_type="text/markdown",
     test_suite="tests.my_test_suite",
     packages=["timefops"],
+    install_requires=["colorama"],
     python_requires=">=3.7",
     classifiers=[
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: System Administrators",
@@ -26,6 +28,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Operating System :: OS Independent",
+        "Topic :: System :: Archiving :: Compression",
         "Topic :: System :: Filesystems",
     ],
     entry_points={

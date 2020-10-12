@@ -146,6 +146,10 @@ def cli(argv):
                                        "(this includes verbose as well) - "
                                        "useful for development.")
 
+        gen_arc_args.add_argument("--no-color", "--no-colour",
+                                  action="store_false",
+                                  help="Disable coloured logging output.")
+
         gen_arc_args.add_argument("--dry-run",
                                   action="store_true",
                                   help="Show results, but don't execute.")
@@ -204,6 +208,10 @@ def cli(argv):
                                  help="Print debug information "
                                       "(this includes verbose as well) - "
                                       "useful for development.")
+
+        gen_cm_args.add_argument("--no-color", "--no-colour",
+                                 action="store_false",
+                                 help="Disable coloured logging output.")
 
         gen_cm_args.add_argument("--dry-run",
                                  action="store_true",
@@ -281,7 +289,7 @@ def cli(argv):
 
 def main():
     args = cli(sys.argv[1::])
-    tfops = Timefops(min(args.debug, args.verbose))
+    tfops = Timefops(min(args.debug, args.verbose), color=args.no_color)
 
     if args.operation == "archive":
         tfops.archive(args.src, args.archive, args.time, args.format,

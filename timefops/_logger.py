@@ -1,16 +1,34 @@
 import logging
-import sys
+import colorama as clr
 
 
 class LogFormatter(logging.Formatter):
-    def __init__(self, *custom_formats):
+    @staticmethod
+    def _gen_msg(content, esc_code=""):
+        """Generates either a colored or uncolored log message."""
+        if esc_code:
+            return getattr(clr.Fore, f"{esc_code}") + \
+                    f"{content} %(msg)s" + clr.Style.RESET_ALL
+        else:
+            return f"{content} %(msg)s"
+
+
+    def __init__(self, *custom_formats, color=True):
         super().__init__()
+        if color:
+            clr.init()
+
         self.FORMATS = {
-            logging.ERROR: "ERROR: %(msg)s",
-            logging.WARNING: "WARNING: %(msg)s",
-            logging.DEBUG: "DEBUG: %(module)s: %(lineno)d: %(msg)s",
-            "DEFAULT": "%(msg)s",
+            logging.ERROR: self._gen_msg("%(levelname)s:", esc_code="RED" \
+                    if color else ""),
+            logging.WARNING: self._gen_msg("%(levelname)s:", esc_code="YELLOW" \
+                    if color else ""),
+            logging.DEBUG: self._gen_msg("%(levelname)s:", esc_code="CYAN" \
+                    if color else ""),
+            logging.INFO: "%(msg)s",
+            "DEFAULT": "%(levelname)s: %(msg)s",
         }
+
         for d in custom_formats:
             for k, v in d.items():
                 self.FORMATS[k] = v
@@ -21,22 +39,16 @@ class LogFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def init_logging(loglevel, name=__name__):
+def init_logging(loglevel, name=__name__, color=True):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(loglevel)
     logger.verbose = lambda msg, *args: logger._log(15, msg, args)
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stderr_handler = logging.StreamHandler(sys.stderr)
-
-    # Set handler levels, formatters, filter(s) and add the handlers.
-    # Log levels 20 (INFO) and below go to stdout, everything above to stderr. 
-    stdout_handler.setLevel(loglevel)
-    stdout_handler.setFormatter(LogFormatter({15: "INFO: %(msg)s"}))
-    stdout_handler.addFilter(lambda x: x.levelno <= logging.INFO)
-    logger.addHandler(stdout_handler)
-
-    stderr_handler.setLevel(logging.WARNING)
-    stderr_handler.setFormatter(LogFormatter())
-    logger.addHandler(stderr_handler)
-
+    logger.success = lambda msg, *args: logger._log(25, msg, args)
+    log_stream = logging.StreamHandler()
+    log_stream.setLevel(loglevel)
+    log_stream.setFormatter(LogFormatter({
+      15: "VERBOSE: %(msg)s", 
+      25: LogFormatter._gen_msg("SUCCESS:", esc_code="GREEN" if color else "")
+    }, color=color))
+    logger.addHandler(log_stream)
     return logger

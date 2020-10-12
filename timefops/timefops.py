@@ -17,8 +17,9 @@ from ._logger import init_logging
 
 
 class Timefops:
-    def __init__(self, log_level=20):
-        self.log = init_logging(log_level, name=__name__)
+    def __init__(self, log_level=20, color=True):
+        self.log = init_logging(log_level, name=__name__, color=color)
+        self.num_warn = 0
 
 
     @staticmethod
@@ -88,11 +89,13 @@ class Timefops:
                     if occur > 1:
                         for subk, subv in val.items():
                             if subv == date:
+                                # self.log.debug(subk)
                                 to_rename[subv][os.path.basename(subk)
                                         ].append(subk)
 
         for d, i in to_rename.items():
             for bn, p in i.items():
+                self.log.debug(f"{len(p)} instances of '{bn}' --> {p}")
                 for k, v in enumerate(p):
                     if k > 0:
                         basename_map[v] = self.add_enumerate(
@@ -101,6 +104,31 @@ class Timefops:
                         basename_map[v] = os.path.basename(v)
 
         return basename_map, to_rename
+
+
+    def _recurse_zip_helper(self, zf, path, zippath):
+        """Borrowed from the source module. Evaluates whether the path is 
+        a file and can just be added, or if it is a directory and needs to be 
+        recursivley run (zipfile does not already do this, for some reason)
+        
+        *args:
+        zf - zipfile.Zipfile: zipfile object instance
+        path - str: path to the file/directory 
+        zippath - str: zip path (dir the path will be added under in the file)
+        """
+        try:
+            if os.path.isfile(path):
+                zf.write(path, arcname=zippath)
+            elif os.path.isdir(path):
+                if zippath:
+                    zf.write(path, zippath)
+                for nm in sorted(os.listdir(path)):
+                    self._recurse_zip_helper(zf,
+                             os.path.join(path, nm), os.path.join(zippath, nm))
+        except PermissionError:
+            self.num_warn += 1
+            self.log.warning("Insufficient permissions to add: "
+                            f"'{os.path.relpath(path)}', skipping.")
 
 
     def move(self, src, dst, method, fmt, individual=False, dry_run=False):
@@ -147,9 +175,10 @@ class Timefops:
                 os.makedirs(target_dir, exist_ok=True)
                 try:
                     shutil.move(i, os.path.join(target_dir, rename_map.get(i)))
-                    self.log.verbose("successfully moved: "
+                    self.log.verbose("done moving: "
                                     f"{os.path.relpath(i)}")
                 except PermissionError:
+                    self.num_warn += 1
                     self.log.warning("Insufficient permissions "
                                     f"to move: '{os.path.relpath(i)}', "
                                     "skipping.")
@@ -161,6 +190,9 @@ class Timefops:
 
         if dry_run:
             self.log.info(f"\n# of items to be moved: {len(file_time_map)}")
+        else:
+            self.log.success("contents moved -- finished with "
+                            f"{self.num_warn} warning(s).")
 
 
     def copy(self, src, dst, method, fmt, individual=False, dry_run=False):
@@ -199,6 +231,7 @@ class Timefops:
                                                     rename_map.get(i)))
                     self.log.verbose(f"done copying: {os.path.relpath(i)}")
                 except PermissionError:
+                    self.num_warn += 1
                     self.log.warning("Insufficient permissions to copy the "
                                      f"directory: '{os.path.relpath(i)}', "
                                      "skipping.")
@@ -208,9 +241,10 @@ class Timefops:
                         try:
                             shutil.copy2(i, os.path.join(target_dir,
                                                          rename_map.get(i)))
-                            self.log.verbose(f"successfully copied: "
-                                              "{os.path.relpath(i)}")
+                            self.log.verbose(f"done copying: "
+                                             f"{os.path.relpath(i)}")
                         except PermissionError:
+                            self.num_warn += 1
                             self.log.warning("Insufficient permissions to copy "
                                             f"the file: '{os.path.relpath(i)}',"
                                              " skipping.")
@@ -222,6 +256,10 @@ class Timefops:
 
         if dry_run:
             self.log.info(f"\n# of items to be copied: {len(file_time_map)}")
+        else:
+            self.log.success("contents copied -- finished with "
+                            f"{self.num_warn} warning(s).")
+
 
 
     def archive(self, src, dst, method, fmt, cmp_sh="", individual=False,
@@ -248,7 +286,9 @@ class Timefops:
         file_time_map = self.path_time_map(src, f"get{method}", fmt,
                                            individual=individual)
 
-        rename_map = self._rename_duplicates(file_time_map)
+        rename_map = self._rename_duplicates(file_time_map) 
+                                             # debug=False if to_stdout else True)
+
 
         if not dry_run:
             # Put the associated items into either a tar archive or a zip file,
@@ -261,28 +301,28 @@ class Timefops:
                                      compression=cmp_mappings.get(cmp_sh,
                                          zipfile.ZIP_STORED)) as z:
                     for i, p in file_time_map.items():
-                        try:
-                            z.write(i, os.path.join(p, rename_map[0].get(i)))
-                            if not to_stdout:
-                                self.log.verbose(
-                                       "added: "
-                                      f"{os.path.join(p,rename_map[0].get(i))}"
-                                )
-                        except PermissionError:
-                            self.log.warning("Insufficient permissions to add: "
-                                  f"'{os.path.relpath(i)}', skipping.")
+                        self._recurse_zip_helper(z, i, 
+                                os.path.join(p, rename_map[0].get(i)))
+                        self.log.verbose("added: "
+                                  f"{os.path.join(p,rename_map[0].get(i))}")
+
+                    self.log.success("zip file created -- finished with "
+                                    f"{self.num_warn} warning(s).")
             else:
                 with tarfile.open(dst, mode=f"x:{cmp_sh}" if cmp_sh else "x",
                                   fileobj=sys.stdout.buffer if to_stdout else None) as t:
                     for i, p in file_time_map.items():
                         try:
                             t.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
-                            if not to_stdout:
-                                # Cant log to stdout while redirecting tar file
-                                self.log.verbose(f"added: {os.path.join(p, rename_map[0].get(i))}")
+                            self.log.verbose(
+                              f"added: {os.path.join(p, rename_map[0].get(i))}")
                         except PermissionError:
+                            self.num_warn += 1
                             self.log.warning("Insufficient permissions to add: "
                                   f"'{os.path.relpath(i)}', skipping.")
+
+                    self.log.success("tar archive created -- finished with "
+                                    f"{self.num_warn} warning(s).")
         else:
             self.log.info(f"Creating directories based on {method}.\n")
             if to_stdout:
