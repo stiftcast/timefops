@@ -11,8 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 * `-z/--zipfile` added with compression support for creating zip files.
 * `--to-stdout` argument added for compressed tarballs and zip files.
 * `-v/--verbose` and `-d/--debug` arguments added for more helpful output.
+* `--no-color/--no-colour` argument added for disabling coloured log output.
 ### Changed
-* Verbose and debug information go to stdout, whereas warnings and errors now go to stderr.
+* [colorama](https://pypi.org/project/colorama/) has been made a dependency.
 ### Fixed
 * Now double-checks when archiving that the file does not exist already.
 ## 0.2
