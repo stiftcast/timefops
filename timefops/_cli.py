@@ -157,9 +157,12 @@ def cli(argv, aes_zip=False):
 
         if aes_zip:
             enc_zip = arc_p.add_argument_group("AES-Encrypted Zipfile options", 
-                    description="Arguments for making a password-protected AES-Encrypted zip file. "
-                    "The -z/--zipfile flag is required for any of these to register, otherwise they will be ignored.")
+                    description="Arguments for making a password-protected "
+                                "AES-Encrypted zip file. The -z/--zipfile "
+                                "flag is required for any of these to "
+                                "register, otherwise they will be ignored.")
             enc_passwd_args = enc_zip.add_mutually_exclusive_group()
+
             enc_passwd_args.add_argument("--zip-password", "-zp",
                                  action="store_true",
                                  help="Prompts for a password to encrypt zip "
@@ -168,6 +171,7 @@ def cli(argv, aes_zip=False):
             enc_passwd_args.add_argument("--zip-password-plaintext", "-zP",
                                          type=str,
                                          nargs='+',
+                                         metavar="PASSWORD",
                                          help="Specify zip file password in "
                                               "plaintext, avoid this option "
                                               "if possible.")
