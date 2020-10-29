@@ -263,7 +263,8 @@ class Timefops:
 
 
     def archive(self, src, dst, method, fmt, cmp_sh="", individual=False,
-                zip_file=False, to_stdout=False, dry_run=False):
+                zip_file=False, to_stdout=False, aes_zip_create=(),
+                dry_run=False):
         """
         *args:
         src - list: directories/filenames.
@@ -289,25 +290,48 @@ class Timefops:
         rename_map = self._rename_duplicates(file_time_map) 
                                              # debug=False if to_stdout else True)
 
+        if aes_zip_create:
+            aes_zip_password, aes_encryption_lvl = aes_zip_create
 
         if not dry_run:
             # Put the associated items into either a tar archive or a zip file,
             # nesting the items under the designated path.
             if zip_file:
-                cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
-                                "xz" : zipfile.ZIP_LZMA}
-                with zipfile.ZipFile(sys.stdout.buffer if to_stdout else dst,
-                                     mode="x",
-                                     compression=cmp_mappings.get(cmp_sh,
-                                         zipfile.ZIP_STORED)) as z:
-                    for i, p in file_time_map.items():
-                        self._recurse_zip_helper(z, i, 
-                                os.path.join(p, rename_map[0].get(i)))
-                        self.log.verbose("added: "
-                                  f"{os.path.join(p,rename_map[0].get(i))}")
+                if aes_zip_create:
+                    import pyzipper
 
-                    self.log.success("zip file created -- finished with "
-                                    f"{self.num_warn} warning(s).")
+                    aes_cmp_mappings = {"bz2": pyzipper.ZIP_BZIP2,
+                                        "xz" : pyzipper.ZIP_LZMA}
+                    with pyzipper.AESZipFile(sys.stdout.buffer if to_stdout else dst,
+                                             mode='x',
+                                             compression=aes_cmp_mappings.get(
+                                                 cmp_sh,
+                                                 pyzipper.ZIP_STORED)) as a_z:
+                        a_z.setpassword(bytes(aes_zip_password, "utf-8"))
+                        a_z.setencryption(pyzipper.WZ_AES, nbits=aes_encryption_lvl)
+                        for i, p in file_time_map.items():
+                            self._recurse_zip_helper(a_z, i, 
+                                    os.path.join(p, rename_map[0].get(i)))
+                            self.log.verbose("added: "
+                                      f"{os.path.join(p,rename_map[0].get(i))}")
+
+                        self.log.success("zip file created -- finished with "
+                                        f"{self.num_warn} warning(s).")
+                else:
+                    cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
+                                    "xz" : zipfile.ZIP_LZMA}
+                    with zipfile.ZipFile(sys.stdout.buffer if to_stdout else dst,
+                                         mode="x",
+                                         compression=cmp_mappings.get(cmp_sh,
+                                             zipfile.ZIP_STORED)) as z:
+                        for i, p in file_time_map.items():
+                            self._recurse_zip_helper(z, i, 
+                                    os.path.join(p, rename_map[0].get(i)))
+                            self.log.verbose("added: "
+                                      f"{os.path.join(p,rename_map[0].get(i))}")
+
+                        self.log.success("zip file created -- finished with "
+                                        f"{self.num_warn} warning(s).")
             else:
                 with tarfile.open(dst, mode=f"x:{cmp_sh}" if cmp_sh else "x",
                                   fileobj=sys.stdout.buffer if to_stdout else None) as t:
@@ -331,6 +355,8 @@ class Timefops:
                 self.log.info(f"writing to file: '{os.path.relpath(dst)}'")
             if cmp_sh:
                 self.log.info(f"- using '{cmp_sh}' compression.")
+            if zip_file and aes_zip_create:
+                self.log.info(f"\nzip file using AES encryption ({aes_encryption_lvl}-bit)")
             self.log.info("\nItem list:")
 
             for n, (i, p) in enumerate(file_time_map.items(), 1):

@@ -1,10 +1,11 @@
 import argparse
 import os
 import sys
+import getpass
 from . import Timefops, __version__, TRANSLATIONS
 
 
-def cli(argv):
+def cli(argv, aes_zip=False):
     main_parser = argparse.ArgumentParser(
         description="Operate on files/directories based on their "
                     "access/change/modified dates.",
@@ -154,6 +155,31 @@ def cli(argv):
                                   action="store_true",
                                   help="Show results, but don't execute.")
 
+        if aes_zip:
+            enc_zip = arc_p.add_argument_group("AES-Encrypted Zipfile options", 
+                    description="Arguments for making a password-protected AES-Encrypted zip file. "
+                    "The -z/--zipfile flag is required for any of these to register, otherwise they will be ignored.")
+            enc_passwd_args = enc_zip.add_mutually_exclusive_group()
+            enc_passwd_args.add_argument("--zip-password", "-zp",
+                                 action="store_true",
+                                 help="Prompts for a password to encrypt zip "
+                                      "folder contents with.")
+
+            enc_passwd_args.add_argument("--zip-password-plaintext", "-zP",
+                                         type=str,
+                                         nargs='+',
+                                         help="Specify zip file password in "
+                                              "plaintext, avoid this option "
+                                              "if possible.")
+
+            enc_zip.add_argument("--zip-encryption", "-ze",
+                                 choices=("weak", "medium", "strong"),
+                                 type=str.lower,
+                                 help="Set the strength of the AES encryption,"
+                                      " if nothing is specified, 'medium' is "
+                                      "used by default.")
+
+
     # base arguments for copy/move operations.
     for cm_p in (dyn_opts["copy_ops_atime_parser"],
                  dyn_opts["copy_ops_ctime_parser"],
@@ -284,17 +310,30 @@ def cli(argv):
         elif not os.access(opts.target_directory, os.W_OK | os.X_OK):
             parser.error("dest. directory is not writable/executable, "
                          "unable to transfer items here.")
+
+    if aes_zip:
+        if opts.zipfile:
+            if opts.zip_encryption and not (opts.zip_password or opts.zip_password_plaintext):
+                parser.error("To make an AES-encrypted zip file, make a password with '-zp' or '-zP'.")
+            elif opts.zip_password:
+                opts.zip_password = getpass.getpass("Enter a password: ")
+            elif opts.zip_password_plaintext:
+                opts.zip_password = " ".join(opts.zip_password_plaintext)
+
+            enc_lvls = {"weak": 128, "medium": 192, "strong": 256}
+            opts.zip_encryption = enc_lvls.get(opts.zip_encryption, 192)
+
     return opts
 
 
 def main():
-    args = cli(sys.argv[1::])
+    args = cli(sys.argv[1::], aes_zip=True)
     tfops = Timefops(min(args.debug, args.verbose), color=args.no_color)
 
     if args.operation == "archive":
         tfops.archive(args.src, args.archive, args.time, args.format,
                       individual=args.individual_items, cmp_sh=args.compression,
-                      zip_file=args.zipfile, to_stdout=args.to_stdout,
+                      zip_file=args.zipfile, to_stdout=args.to_stdout, aes_zip_create=(args.zip_password, args.zip_encryption),
                       dry_run=args.dry_run)
 
     elif args.operation == "copy":
@@ -304,7 +343,6 @@ def main():
     elif args.operation == "move":
         tfops.move(args.src, args.target_directory, args.time, args.format,
                    individual=args.individual_items, dry_run=args.dry_run)
-
 
 if __name__ == "__main__":
     main()
