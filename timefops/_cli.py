@@ -5,7 +5,7 @@ import getpass
 from . import Timefops, __version__, TRANSLATIONS
 
 
-def cli(argv, aes_zip=False):
+def cli(argv):
     main_parser = argparse.ArgumentParser(
         description="Operate on files/directories based on their "
                     "access/change/modified dates.",
@@ -73,7 +73,7 @@ def cli(argv, aes_zip=False):
                       f"'sorted by {TRANSLATIONS.get(str(p).split('_')[0])}.')",
              globals(), dyn_opts)
 
-    # base arguments for archive operation.
+    # arguments for archive operation.
     for arc_p in (dyn_opts["archive_ops_atime_parser"],
                   dyn_opts["archive_ops_ctime_parser"],
                   dyn_opts["archive_ops_mtime_parser"]):
@@ -137,15 +137,14 @@ def cli(argv, aes_zip=False):
                                   action="store_const",
                                   const=15,
                                   default=20,
-                                  help="Get verbose output.")
+                                  help="Set log level to verbose.")
 
         gen_arc_args.add_argument("-d", "--debug",
                                   action="store_const",
                                   const=5,
                                   default=20,
-                                  help="Print debug information "
-                                       "(this includes verbose as well) - "
-                                       "useful for development.")
+                                  help="Set log level to debug "
+                                       "(includes verbose).")
 
         gen_arc_args.add_argument("--no-color", "--no-colour",
                                   action="store_false",
@@ -155,36 +154,34 @@ def cli(argv, aes_zip=False):
                                   action="store_true",
                                   help="Show results, but don't execute.")
 
-        if aes_zip:
-            enc_zip = arc_p.add_argument_group("AES-Encrypted Zipfile options", 
-                    description="Arguments for making a password-protected "
-                                "AES-Encrypted zip file. The -z/--zipfile "
-                                "flag is required for any of these to "
-                                "register, otherwise they will be ignored.")
-            enc_passwd_args = enc_zip.add_mutually_exclusive_group()
+        enc_zip = arc_p.add_argument_group("AES-Encrypted Zipfile options", 
+                description="Arguments for making a password-protected "
+                            "AES-Encrypted zip file. The -z/--zipfile "
+                            "flag is required for any of these to "
+                            "register, otherwise they will be ignored.")
+        enc_passwd_args = enc_zip.add_mutually_exclusive_group()
 
-            enc_passwd_args.add_argument("--zip-password", "-zp",
-                                 action="store_true",
-                                 help="Prompts for a password to encrypt zip "
-                                      "folder contents with.")
+        enc_passwd_args.add_argument("--zip-password", "-zp",
+                             action="store_true",
+                             help="Prompts for a password to encrypt zip "
+                                  "folder contents with.")
 
-            enc_passwd_args.add_argument("--zip-password-plaintext", "-zP",
-                                         type=str,
-                                         nargs='+',
-                                         metavar="PASSWORD",
-                                         help="Specify zip file password in "
-                                              "plaintext, avoid this option "
-                                              "if possible.")
+        enc_passwd_args.add_argument("--zip-password-plaintext", "-zP",
+                                     type=str,
+                                     metavar="PASSWORD",
+                                     help="Specify zip file password in "
+                                          "plaintext, avoid this option "
+                                          "if possible.")
 
-            enc_zip.add_argument("--zip-encryption", "-ze",
-                                 choices=("weak", "medium", "strong"),
-                                 type=str.lower,
-                                 help="Set the strength of the AES encryption,"
-                                      " if nothing is specified, 'medium' is "
-                                      "used by default.")
+        enc_zip.add_argument("--zip-encryption", "-ze",
+                             choices=("weak", "medium", "strong"),
+                             type=str.lower,
+                             help="Set the strength of the AES encryption,"
+                                  " if nothing is specified, 'medium' is "
+                                  "used by default.")
 
 
-    # base arguments for copy/move operations.
+    # arguments for copy/move operations.
     for cm_p in (dyn_opts["copy_ops_atime_parser"],
                  dyn_opts["copy_ops_ctime_parser"],
                  dyn_opts["copy_ops_mtime_parser"],
@@ -229,15 +226,14 @@ def cli(argv, aes_zip=False):
                                  action="store_const",
                                  const=15,
                                  default=20,
-                                 help="Get verbose output.")
+                                 help="Set log level to verbose.")
 
         gen_cm_args.add_argument("-d", "--debug",
                                  action="store_const",
                                  const=5,
                                  default=20,
-                                 help="Print debug information "
-                                      "(this includes verbose as well) - "
-                                      "useful for development.")
+                                 help="Set log level to debug "
+                                      "(includes verbose).")
 
         gen_cm_args.add_argument("--no-color", "--no-colour",
                                  action="store_false",
@@ -307,6 +303,19 @@ def cli(argv, aes_zip=False):
                 parser.error("'gz' compression not available with -z/--zipfile")
         else:
             parser.error("either one of -a/--archive or --to-stdout is required.")
+
+        if opts.zipfile:
+            if opts.zip_encryption and not (opts.zip_password or \
+                    opts.zip_password_plaintext):
+                parser.error("To make an AES-encrypted zip file, make a "
+                             "password with '-zp' or '-zP'.")
+            elif opts.zip_password and not opts.dry_run:
+                opts.zip_password = getpass.getpass("Enter a password: ")
+            elif opts.zip_password_plaintext:
+                opts.zip_password = opts.zip_password_plaintext
+
+            enc_lvls = {"weak": 128, "medium": 192, "strong": 256}
+            opts.zip_encryption = enc_lvls.get(opts.zip_encryption, 192)
     else:
         if not os.path.isdir(opts.target_directory):
             parser.error(f"dest. directory '{opts.target_directory}' not "
@@ -315,29 +324,19 @@ def cli(argv, aes_zip=False):
             parser.error("dest. directory is not writable/executable, "
                          "unable to transfer items here.")
 
-    if aes_zip:
-        if opts.zipfile:
-            if opts.zip_encryption and not (opts.zip_password or opts.zip_password_plaintext):
-                parser.error("To make an AES-encrypted zip file, make a password with '-zp' or '-zP'.")
-            elif opts.zip_password:
-                opts.zip_password = getpass.getpass("Enter a password: ")
-            elif opts.zip_password_plaintext:
-                opts.zip_password = " ".join(opts.zip_password_plaintext)
-
-            enc_lvls = {"weak": 128, "medium": 192, "strong": 256}
-            opts.zip_encryption = enc_lvls.get(opts.zip_encryption, 192)
-
     return opts
 
 
 def main():
-    args = cli(sys.argv[1::], aes_zip=True)
+    args = cli(sys.argv[1::])
     tfops = Timefops(min(args.debug, args.verbose), color=args.no_color)
 
     if args.operation == "archive":
         tfops.archive(args.src, args.archive, args.time, args.format,
                       individual=args.individual_items, cmp_sh=args.compression,
-                      zip_file=args.zipfile, to_stdout=args.to_stdout, aes_zip_create=(args.zip_password, args.zip_encryption),
+                      zip_file=args.zipfile, to_stdout=args.to_stdout, 
+                      aes_zip_create=(args.zip_password, args.zip_encryption) \
+                                     if args.zip_password else (),
                       dry_run=args.dry_run)
 
     elif args.operation == "copy":
@@ -347,6 +346,7 @@ def main():
     elif args.operation == "move":
         tfops.move(args.src, args.target_directory, args.time, args.format,
                    individual=args.individual_items, dry_run=args.dry_run)
+
 
 if __name__ == "__main__":
     main()

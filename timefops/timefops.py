@@ -12,6 +12,7 @@ import shutil
 import errno
 import tarfile
 import zipfile
+import pyzipper
 from datetime import datetime as dt
 from ._logger import init_logging
 
@@ -298,8 +299,6 @@ class Timefops:
             # nesting the items under the designated path.
             if zip_file:
                 if aes_zip_create:
-                    import pyzipper
-
                     aes_cmp_mappings = {"bz2": pyzipper.ZIP_BZIP2,
                                         "xz" : pyzipper.ZIP_LZMA}
                     with pyzipper.AESZipFile(sys.stdout.buffer if to_stdout else dst,
