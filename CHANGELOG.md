@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 * `-v/--verbose` and `-d/--debug` arguments added for more helpful output.
 * `--no-color/--no-colour` argument added for disabling coloured log output.
 ### Changed
-* [colorama](https://pypi.org/project/colorama/) and [pyzipper] (https://pypi.org/project/pyzipper/) have both been made dependencies.
+* [colorama](https://pypi.org/project/colorama/) and [pyzipper](https://pypi.org/project/pyzipper/) have both been made dependencies.
 ### Fixed
 * Now double-checks when archiving that the file does not exist already.
 ## 0.2
