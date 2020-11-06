@@ -36,7 +36,7 @@ class Timefops:
     def add_enumerate(f, num):
         """Seperates a path and adds 'num' in the right spot, used for renaming."""
         name, suffix = os.path.splitext(f)
-        return "{}({}){}".format(name, num, suffix)
+        return f"{name}({num}){suffix}"
 
 
     @staticmethod
