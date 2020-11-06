@@ -17,9 +17,10 @@ from datetime import datetime as dt
 from ._logger import init_logging
 
 
+
 class Timefops:
-    def __init__(self, log_level=20, color=True):
-        self.log = init_logging(log_level, name=__name__, color=color)
+    def __init__(self, log_level, color=True, name=__name__):
+        self.log = init_logging(log_level, name, color=color)
         self.num_warn = 0
 
 

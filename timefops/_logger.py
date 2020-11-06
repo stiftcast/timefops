@@ -39,7 +39,7 @@ class LogFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def init_logging(loglevel, name=__name__, color=True):
+def init_logging(loglevel, name, color=True):
     logger = logging.getLogger(name)
     logger.setLevel(loglevel)
     logger.verbose = lambda msg, *args: logger._log(15, msg, args)
