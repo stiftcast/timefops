@@ -159,7 +159,11 @@ def cli(argv):
                 description="Arguments for making a password-protected "
                             "AES-Encrypted zip file. The -z/--zipfile "
                             "flag is required for any of these to "
-                            "register, otherwise they will be ignored.")
+                            "register, otherwise they will be ignored."
+                            " Encrypting a zip file will not hide the "
+                            "directory structure, or encrypt any directories, "
+                            "but will encrypt individual files.")
+
         enc_passwd_args = enc_zip.add_mutually_exclusive_group()
 
         enc_passwd_args.add_argument("--zip-password", "-zp",
