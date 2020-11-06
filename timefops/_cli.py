@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import getpass
+import logging
 from . import Timefops, __version__, TRANSLATIONS
 
 
@@ -135,14 +136,14 @@ def cli(argv):
 
         gen_arc_args.add_argument("-v", "--verbose",
                                   action="store_const",
-                                  const=15,
-                                  default=20,
+                                  const=int(logging.INFO - 5),
+                                  default=logging.INFO,
                                   help="Set log level to verbose.")
 
         gen_arc_args.add_argument("-d", "--debug",
                                   action="store_const",
-                                  const=5,
-                                  default=20,
+                                  const=logging.DEBUG,
+                                  default=logging.INFO,
                                   help="Set log level to debug "
                                        "(includes verbose).")
 
@@ -224,14 +225,14 @@ def cli(argv):
 
         gen_cm_args.add_argument("-v", "--verbose",
                                  action="store_const",
-                                 const=15,
-                                 default=20,
+                                 const=int(logging.INFO - 5),
+                                 default=logging.INFO,
                                  help="Set log level to verbose.")
 
         gen_cm_args.add_argument("-d", "--debug",
                                  action="store_const",
-                                 const=5,
-                                 default=20,
+                                 const=logging.DEBUG,
+                                 default=logging.INFO,
                                  help="Set log level to debug "
                                       "(includes verbose).")
 
