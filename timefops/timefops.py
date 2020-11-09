@@ -94,7 +94,6 @@ class Timefops:
                 for date, occur in collections.Counter(val.values()).items():
                     if occur > 1:
                         for subk, subv in val.items():
-                            print(subv, date)
                             if subv == date:
                                 to_rename[subv][os.path.basename(subk)
                                         ].append(subk)
