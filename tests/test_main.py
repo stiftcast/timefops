@@ -6,12 +6,13 @@ import os
 import random
 import uuid
 import collections
+import logging
 from timefops import Timefops 
 
 
 class TestHelpers(unittest.TestCase):
     def setUp(self):
-        self.tf = Timefops()
+        self.tf = Timefops(logging.INFO)
 
     @mock.patch('os.path.ismount')
     def test_one(self, mock_method):
@@ -34,10 +35,11 @@ class TestHelpers(unittest.TestCase):
 
         mock_files = ("unit", "test")
         test_data = {}
-        for _ in range(0, 100):
+        for _ in range(0, 250):
             test_data[os.path.join(
                 str(uuid.uuid4()), random.choice(mock_files))
-                     ] = random.choice(("2017", "2018", "2019", "2020"))
+                     ] = random.choice(("2017", "2018", "2019", "2020")),
+            random.choice(("Jan", "Feb", "Mar", "Apr", "May"))
 
         file_count = list(map(collections.Counter, [
             [v for k, v in test_data.items() if os.path.basename(k) == f]
