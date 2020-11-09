@@ -9,7 +9,7 @@ from . import Timefops, __version__, TRANSLATIONS
 def cli(argv):
     main_parser = argparse.ArgumentParser(
         description="Operate on files/directories based on their "
-                    "access/change/modified dates.",
+                    "access/change/modified times.",
         formatter_class=argparse.RawTextHelpFormatter)
 
     main_parser.add_argument("-V", "--version",

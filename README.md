@@ -30,7 +30,7 @@ Choosing the time predicate:
 stiftcast@debian:~$ timefops -h
 usage: timefops [-h] [-V] <time> ...
 
-Operate on files/directories based on their access/change/modified dates.
+Operate on files/directories based on their access/change/modified times.
 
 optional arguments:
   -h, --help     show this help message and exit
@@ -55,9 +55,9 @@ optional arguments:
 
 Operations:
   <operation>
-    archive      Archive contents to a tarball, with optional compression.
+    archive      Archive contents to a tarball or a zip file.
     copy         Copy contents to a different location.
-    move         Move contents to a different (local) location.
+    move         Move contents to a different location.
 ```
 
 <br /> Options for `archive`:
@@ -68,20 +68,46 @@ optional arguments:
 
 General arguments:
   src                   Source directories/files.
-  -a ARCHIVE, --archive ARCHIVE
+  -a NAME, --archive NAME
                         Name for target archive.
+  --to-stdout           Write tar archive or zip file to stdout instead of a
+                        named file, emulates the '-' option of the tar and zip
+                        executables.
+  -z, --zipfile         Makes a zip file instead of a tar archive (GZ
+                        compression is not available with this option)
   -c {bz2,gz,xz}, --compression {bz2,gz,xz}
                         Compression format for the archive.
-  -f FORMAT, --format FORMAT
+  -f FORMAT [FORMAT ...], --format FORMAT [FORMAT ...]
                         Set folder name format (using Python's datetime
-                        formatting directives).
+                        formatting directives). If there are multiple values
+                        specifed, contents will get nested under the last
+                        value.
   -i, --individual-items
                         Setting this flag will allow for specifying individual
                         source files and folders. The difference between
                         specifiying a source folder with this flag on is that
                         any folder(s) specified will not be traversed and
                         instead be treated as a standalone item.
+  -v, --verbose         Set log level to verbose.
+  -d, --debug           Set log level to debug (includes verbose).
+  --no-color, --no-colour
+                        Disable coloured logging output.
   --dry-run             Show results, but don't execute.
+
+AES-Encrypted Zipfile options:
+  Arguments for making a password-protected AES-Encrypted zip file. The
+  -z/--zipfile flag is required for any of these to register, otherwise they
+  will be ignored. Encrypting a zip file will not hide the directory
+  structure, or encrypt any directories, but will encrypt individual files.
+
+  --zip-password, -zp   Prompts for a password to encrypt zip folder contents
+                        with.
+  --zip-password-plaintext PASSWORD, -zP PASSWORD
+                        Specify zip file password in plaintext, avoid this
+                        option if possible.
+  --zip-encryption {weak,medium,strong}, -ze {weak,medium,strong}
+                        Set the strength of the AES encryption, if nothing is
+                        specified, 'medium' is used by default.
 ```
 
 Options for `copy` or `move`:
@@ -94,15 +120,21 @@ General arguments:
   src                   Source directories/files.
   -t TARGET_DIRECTORY, --target-directory TARGET_DIRECTORY
                         Destination directory.
-  -f FORMAT, --format FORMAT
+  -f FORMAT [FORMAT ...], --format FORMAT [FORMAT ...]
                         Set folder name format (using Python's datetime
-                        formatting directives).
+                        formatting directives). If there are multiple values
+                        specifed, contents will get nested under the last
+                        value.
   -i, --individual-items
                         Setting this flag will allow for specifying individual
                         source files and folders. The difference between
                         specifiying a source folder with this flag on is that
                         any folder(s) specified will not be traversed and
                         instead be treated as a standalone item.
+  -v, --verbose         Set log level to verbose.
+  -d, --debug           Set log level to debug (includes verbose).
+  --no-color, --no-colour
+                        Disable coloured logging output.
   --dry-run             Show results, but don't execute.
 ```
 ## Examples
