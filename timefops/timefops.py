@@ -40,8 +40,7 @@ class Timefops:
         return f"{name}({num}){suffix}"
 
 
-    @staticmethod
-    def path_time_map(src, method, fmt, individual=False):
+    def path_time_map(self, src, method, fmt, individual=False):
         """
         *args:
         src - list: list of paths.
@@ -56,13 +55,18 @@ class Timefops:
         Returns:
         { absolute_path: [acm]time of object (str; determined by 'fmt' arg) }
         """
+        self.log.debug(f"format predicate -- {len(fmt)} levels, sample: " 
+                       f"'{'/'.join(dt.now().strftime(x) for x in fmt)}'")
+
         if individual:
-            return {os.path.abspath(x): dt.fromtimestamp(getattr(
-                os.path, method)(x)).strftime(fmt) for x in src}
+            return {os.path.abspath(x): '/'.join(dt.fromtimestamp(getattr(
+                os.path, method)(x)).strftime(sub_fmt) for sub_fmt in fmt) 
+                   for x in src}
         else:
-            return {os.path.abspath(y): dt.fromtimestamp(getattr(
-                os.path, method)(y)).strftime(fmt) for x in list(
-                    (os.scandir(path) for path in src)) for y in x}
+            return {os.path.abspath(y): '/'.join(dt.fromtimestamp(getattr(
+                os.path, method)(y)).strftime(sub_fmt) for sub_fmt in fmt)
+                   for x in list((os.scandir(path) for path in src)) 
+                      for sub_fmt in fmt for y in x}
 
 
     def _rename_duplicates(self, f):
@@ -90,8 +94,8 @@ class Timefops:
                 for date, occur in collections.Counter(val.values()).items():
                     if occur > 1:
                         for subk, subv in val.items():
+                            print(subv, date)
                             if subv == date:
-                                # self.log.debug(subk)
                                 to_rename[subv][os.path.basename(subk)
                                         ].append(subk)
 
@@ -290,7 +294,6 @@ class Timefops:
                                            individual=individual)
 
         rename_map = self._rename_duplicates(file_time_map) 
-                                             # debug=False if to_stdout else True)
 
         if aes_zip_create:
             aes_zip_password, aes_encryption_lvl = aes_zip_create

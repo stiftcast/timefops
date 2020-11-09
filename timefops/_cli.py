@@ -121,8 +121,12 @@ def cli(argv):
         gen_arc_args.add_argument("-f", "--format",
                                   type=str,
                                   default="%Y-%m-%d",
+                                  nargs="+",
                                   help="Set folder name format (using Python's "
-                                       "datetime formatting directives).")
+                                       "datetime formatting directives). If "
+                                       "there are multiple values specifed, "
+                                       "contents will get nested under the "
+                                       "last value.")
 
         gen_arc_args.add_argument("-i", "--individual-items",
                                   action="store_true",
@@ -214,8 +218,12 @@ def cli(argv):
         gen_cm_args.add_argument("-f", "--format",
                                  type=str,
                                  default="%Y-%m-%d",
+                                 nargs="+",
                                  help="Set folder name format (using Python's "
-                                      "datetime formatting directives).")
+                                       "datetime formatting directives). If "
+                                       "there are multiple values specifed, "
+                                       "contents will get nested under the "
+                                       "last value.")
 
         gen_cm_args.add_argument("-i", "--individual-items",
                                  action="store_true",
