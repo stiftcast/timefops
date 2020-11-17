@@ -302,17 +302,17 @@ class Timefops:
             # nesting the items under the designated path.
             if zip_file:
                 if aes_zip_create:
-                    aes_cmp_mappings = {"bz2": pyzipper.ZIP_BZIP2,
-                                        "xz" : pyzipper.ZIP_LZMA}
                     with pyzipper.AESZipFile(sys.stdout.buffer if to_stdout else dst,
                                              mode='x',
-                                             compression=aes_cmp_mappings.get(
-                                                 cmp_sh,
-                                                 pyzipper.ZIP_STORED)) as a_z:
-                        a_z.setpassword(bytes(aes_zip_password, "utf-8"))
-                        a_z.setencryption(pyzipper.WZ_AES, nbits=aes_encryption_lvl)
+                                            compression={
+                                                "bz2": pyzipper.ZIP_BZIP2,
+                                                "xz" : pyzipper.ZIP_LZMA
+                                                }.get(cmp_sh,
+                                                    pyzipper.ZIP_STORED)) as az:
+                        az.setpassword(bytes(aes_zip_password, "utf-8"))
+                        az.setencryption(pyzipper.WZ_AES, nbits=aes_encryption_lvl)
                         for i, p in file_time_map.items():
-                            self._recurse_zip_helper(a_z, i, 
+                            self._recurse_zip_helper(az, i, 
                                     os.path.join(p, rename_map[0].get(i)))
                             self.log.verbose("added: "
                                       f"{os.path.join(p,rename_map[0].get(i))}")
@@ -320,12 +320,12 @@ class Timefops:
                         self.log.success("zip file created -- finished with "
                                         f"{self.num_warn} warning(s).")
                 else:
-                    cmp_mappings = {"bz2": zipfile.ZIP_BZIP2,
-                                    "xz" : zipfile.ZIP_LZMA}
                     with zipfile.ZipFile(sys.stdout.buffer if to_stdout else dst,
                                          mode="x",
-                                         compression=cmp_mappings.get(cmp_sh,
-                                             zipfile.ZIP_STORED)) as z:
+                                         compression={
+                                             "bz2": zipfile.ZIP_BZIP2,
+                                             "xz" : zipfile.ZIP_LZMA
+                                             }.get(zipfile.ZIP_STORED)) as z:
                         for i, p in file_time_map.items():
                             self._recurse_zip_helper(z, i, 
                                     os.path.join(p, rename_map[0].get(i)))

@@ -120,7 +120,7 @@ def cli(argv):
 
         gen_arc_args.add_argument("-f", "--format",
                                   type=str,
-                                  default="%Y-%m-%d",
+                                  default=["%Y-%m-%d"],
                                   nargs="+",
                                   help="Set folder name format (using Python's "
                                        "datetime formatting directives). If "
@@ -217,7 +217,7 @@ def cli(argv):
 
         gen_cm_args.add_argument("-f", "--format",
                                  type=str,
-                                 default="%Y-%m-%d",
+                                 default=["%Y-%m-%d"],
                                  nargs="+",
                                  help="Set folder name format (using Python's "
                                        "datetime formatting directives). If "
