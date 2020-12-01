@@ -100,7 +100,8 @@ class Timefops:
 
         for d, i in to_rename.items():
             for bn, p in i.items():
-                self.log.debug(f"{len(p)} instances of '{bn}' --> {p}")
+                self.log.debug(f"{len(p)} instances of '{bn}' --> "
+                               f"{[os.path.relpath(x) for x in p]}")
                 for k, v in enumerate(p):
                     if k > 0:
                         basename_map[v] = self.add_enumerate(
@@ -170,7 +171,7 @@ class Timefops:
         rename_map = self._rename_duplicates(file_time_map)[0]
 
         if dry_run:
-            self.log.info(f"Creating directories based on {method}.\n")
+            self.log.info(f"\nCreating directories based on {method}.\n")
             self.log.info("Item list:")
 
         # Move the associated items to the designated path.
@@ -223,7 +224,7 @@ class Timefops:
         rename_map = self._rename_duplicates(file_time_map)[0]
 
         if dry_run:
-            self.log.info(f"Creating directories based on {method}.\n")
+            self.log.info(f"\nCreating directories based on {method}.\n")
             self.log.info("Item list:")
 
         # Copy the associated items to the designated path.
@@ -355,7 +356,7 @@ class Timefops:
                     self.log.success("tar archive created -- finished with "
                                     f"{self.num_warn} warning(s).")
         else:
-            self.log.info(f"Creating directories based on {method}.\n")
+            self.log.info(f"\nCreating directories based on {method}.\n")
             if to_stdout:
                 self.log.info("writing to stdout...")
             else:
@@ -365,6 +366,8 @@ class Timefops:
             if zip_file and aes_zip_create:
                 self.log.info("\nzip file using AES encryption "
                              f"({aes_encryption_lvl}-bit)")
+            if zip_file and aes_zip_password:
+                self.log.info("password-protection will be set.")
             self.log.info("\nItem list:")
 
             for n, (i, p) in enumerate(file_time_map.items(), 1):

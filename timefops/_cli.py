@@ -310,9 +310,9 @@ def cli(argv):
                 parser.error("directory where archive is to be created is not "
                              "writable/executable, unable to make archive here.")
         elif opts.to_stdout:
-            if not opts.compression:
-                parser.error("--to-stdout requires compression option "
-                             "(with -c/--compression)")
+            if not opts.compression and not opts.zipfile:
+                parser.error("--to-stdout needs compression "
+                        "(-c/--compression) when working with a tar archive")
             elif opts.zipfile and opts.compression == "gz":
                 parser.error("'gz' compression not available with -z/--zipfile")
         else:
@@ -351,7 +351,8 @@ def main():
                       individual=args.individual_items, cmp_sh=args.compression,
                       zip_file=args.zipfile, to_stdout=args.to_stdout, 
                       aes_zip_create=(args.zip_password, args.zip_encryption) \
-                                     if args.zip_password else (),
+                                     if args.zip_password \
+                                     or args.zip_encryption else (),
                       dry_run=args.dry_run)
 
     elif args.operation == "copy":
