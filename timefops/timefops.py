@@ -284,8 +284,8 @@ class Timefops:
         dry_run - bool: whether to actually run, or just print expected results.
 
 
-        Makes a tar archive containing the files/folders specified in 'src' nested
-        under folders by a date defined by the 'method' parameter
+        Makes a tar archive containing the files/folders specified in 'src' 
+        nested under folders by a date defined by the 'method' parameter
         (atime, ctime, mtime) and fmt (format identifier). This archive can be
         compressed by passing a valid compression method to 'cmp_sh'.
         """
@@ -302,15 +302,17 @@ class Timefops:
             # nesting the items under the designated path.
             if zip_file:
                 if aes_zip_create:
-                    with pyzipper.AESZipFile(sys.stdout.buffer if to_stdout else dst,
+                    with pyzipper.AESZipFile(sys.stdout.buffer \
+                                             if to_stdout else dst,
                                              mode='x',
-                                            compression={
+                                             compression={
                                                 "bz2": pyzipper.ZIP_BZIP2,
                                                 "xz" : pyzipper.ZIP_LZMA
                                                 }.get(cmp_sh,
                                                     pyzipper.ZIP_STORED)) as az:
                         az.setpassword(bytes(aes_zip_password, "utf-8"))
-                        az.setencryption(pyzipper.WZ_AES, nbits=aes_encryption_lvl)
+                        az.setencryption(pyzipper.WZ_AES, 
+                                         nbits=aes_encryption_lvl)
                         for i, p in file_time_map.items():
                             self._recurse_zip_helper(az, i, 
                                     os.path.join(p, rename_map[0].get(i)))
@@ -320,7 +322,8 @@ class Timefops:
                         self.log.success("zip file created -- finished with "
                                         f"{self.num_warn} warning(s).")
                 else:
-                    with zipfile.ZipFile(sys.stdout.buffer if to_stdout else dst,
+                    with zipfile.ZipFile(sys.stdout.buffer \
+                                         if to_stdout else dst,
                                          mode="x",
                                          compression={
                                              "bz2": zipfile.ZIP_BZIP2,
@@ -336,10 +339,12 @@ class Timefops:
                                         f"{self.num_warn} warning(s).")
             else:
                 with tarfile.open(dst, mode=f"x:{cmp_sh}" if cmp_sh else "x",
-                                  fileobj=sys.stdout.buffer if to_stdout else None) as t:
+                                  fileobj=sys.stdout.buffer \
+                                          if to_stdout else None) as t:
                     for i, p in file_time_map.items():
                         try:
-                            t.add(i, arcname=os.path.join(p, rename_map[0].get(i)))
+                            t.add(i, arcname=os.path.join(
+                                             p, rename_map[0].get(i)))
                             self.log.verbose(
                               f"added: {os.path.join(p, rename_map[0].get(i))}")
                         except PermissionError:
@@ -358,7 +363,8 @@ class Timefops:
             if cmp_sh:
                 self.log.info(f"- using '{cmp_sh}' compression.")
             if zip_file and aes_zip_create:
-                self.log.info(f"\nzip file using AES encryption ({aes_encryption_lvl}-bit)")
+                self.log.info("\nzip file using AES encryption "
+                             f"({aes_encryption_lvl}-bit)")
             self.log.info("\nItem list:")
 
             for n, (i, p) in enumerate(file_time_map.items(), 1):

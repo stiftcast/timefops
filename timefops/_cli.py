@@ -311,11 +311,13 @@ def cli(argv):
                              "writable/executable, unable to make archive here.")
         elif opts.to_stdout:
             if not opts.compression:
-                parser.error("--to-stdout requires compression option (with -c/--compression)")
+                parser.error("--to-stdout requires compression option "
+                             "(with -c/--compression)")
             elif opts.zipfile and opts.compression == "gz":
                 parser.error("'gz' compression not available with -z/--zipfile")
         else:
-            parser.error("either one of -a/--archive or --to-stdout is required.")
+            parser.error("either one of -a/--archive or --to-stdout "
+                         "is required.")
 
         if opts.zipfile:
             if opts.zip_encryption and not (opts.zip_password or \
